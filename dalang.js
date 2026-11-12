@@ -5,17 +5,31 @@
   const done=(ok,v)=>{ if(window.Android){ ok?Android.result(JSON.stringify(v)):Android.error(String(v)); } return {ok:ok,v:v}; };
   try{
     const MN=['january','february','march','april','may','june','july','august','september','october','november','december'];
-    const cur=()=>{const m=document.body.innerText.match(/([A-Za-z]+)\s*\/\s*(\d{4})/);if(!m)return null;const i=MN.indexOf(m[1].toLowerCase());return i<0?null:{y:+m[2],m:i+1}};
+    const mIndex=n=>MN.findIndex(x=>x.indexOf(String(n).toLowerCase().slice(0,3))===0);
+    const cur=()=>{
+      const srcs=[document.body.innerText||'',document.body.textContent||''];
+      for(const t of srcs){
+        let m=t.match(/Payments for\s+([A-Za-z]{3,})\s+(\d{4})/i)||t.match(/([A-Za-z]{3,})\s*\/\s*(\d{4})/);
+        if(m){const i=mIndex(m[1]);if(i>=0)return {y:+m[2],m:i+1}}
+      }
+      return null;
+    };
     const waitRows=async()=>{for(let i=0;i<40;i++){if(document.querySelector('tr.mat-row,tr[mat-row]')||/no (data|sessions)/i.test(document.body.innerText)&&cur())return;await sleep(300)}};
+    const diag=()=>[...document.querySelectorAll('button[aria-label]')].map(b=>b.getAttribute('aria-label')).filter(x=>/month|year/i.test(x)).slice(0,6).join(', ');
     P('Hľadám mesiac…');let c=cur();
     if(!c)return done(false,'Na stránke sa nenašiel výber mesiaca.');
     let guard=0;
     while((c.y*12+c.m)!==(TY*12+TM)&&guard++<60){
       const back=(c.y*12+c.m)>(TY*12+TM);
       const b=document.querySelector(back?'button[aria-label^="Go back a month"]':'button[aria-label^="Go forward a month"]');
-      if(!b||b.disabled||b.classList.contains('mat-button-disabled'))return done(false,'Požadovaný mesiac sa nedá otvoriť.');
-      b.click();await sleep(1000);await waitRows();c=cur();
+      if(!b)return done(false,'Mesiac sa nedá otvoriť: chýba tlačidlo (zobrazený '+c.m+'/'+c.y+', hľadaný '+TM+'/'+TY+'; '+diag()+').');
+      if(b.disabled||b.classList.contains('mat-button-disabled'))return done(false,'Portál nemá údaje pre mesiac '+TM+'/'+TY+' (zobrazený '+c.m+'/'+c.y+').');
+      const before=c.y*12+c.m;
+      b.click();
+      for(let w=0;w<20;w++){await sleep(400);const n=cur();if(n&&(n.y*12+n.m)!==before)break}
+      await waitRows();c=cur();
       if(!c)return done(false,'Stránka po zmene mesiaca nenačítala dáta.');
+      if((c.y*12+c.m)===before)return done(false,'Mesiac sa po ťuknutí nezmenil (zobrazený '+c.m+'/'+c.y+', hľadaný '+TM+'/'+TY+').');
     }
     if((c.y*12+c.m)!==(TY*12+TM))return done(false,'Nepodarilo sa prepnúť na požadovaný mesiac.');
     P('Načítavam hovory…');await waitRows();
