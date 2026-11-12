@@ -88,6 +88,7 @@ input.amt{font-size:28px;font-weight:300}
  <label>Suma (£)</label><input class="amt" id="amount" inputmode="decimal" placeholder="0,00" autocomplete="off">
  <label>Agentúra</label><div class="chips" id="agchips"></div>
  <label>Dátum</label><input type="date" id="date"><div class="chips"><button class="chip" id="today">Dnes</button><button class="chip" id="yday">Včera</button></div>
+ <label>Odtlmočené minúty (nepovinné)</label><input id="mins" inputmode="decimal" placeholder="napr. 35 alebo 1:20" autocomplete="off">
  <label>Poznámka (nepovinné)</label><input id="note" placeholder="napr. 3 hovory" autocomplete="off">
  <div class="err" id="err1"></div>
  <div class="btns"><button class="btn d" id="del" style="display:none">Zmazať</button><button class="btn" id="c1">Zrušiť</button><button class="btn p" id="s1">Uložiť</button></div>
@@ -101,6 +102,10 @@ input.amt{font-size:28px;font-weight:300}
  <div class="grp">Cieľ a kurz</div>
  <div class="two"><div><label>Očakávané príjmy / cieľ (£)</label><input id="goalIn" inputmode="decimal" autocomplete="off"></div><div><label>1 £ = ? €</label><input id="rateIn" inputmode="decimal" autocomplete="off"></div></div>
  <div class="hint">Očakávané mesačné príjmy (cieľ) platia pre každý mesiac. Kurz ovplyvní prepočet na eurá.</div>
+
+ <div class="grp">Pracovné dni</div>
+ <div class="chips" id="wdset"></div>
+ <div class="hint">Počítajú sa do zostávajúcich dní, odhadu a denného cieľa. Ak pracuješ aj cez víkend, zárobok sa započíta normálne.</div>
 
  <div class="grp">Agentúry</div>
  <div id="agset"></div>
@@ -138,7 +143,7 @@ const DN=['Nedeľa','Pondelok','Utorok','Streda','Štvrtok','Piatok','Sobota'];
 const WD=['Po','Ut','St','Št','Pi','So','Ne'];
 const VIEW=[
  ['Ciele a tempo',[['goal','Cieľ mesiaca','Ukazovateľ, ako ďaleko si od cieľa'],['pace','Potrebný denný zárobok','Koľko treba denne do konca mesiaca'],['forecast','Odhad na koniec mesiaca','Podľa doterajšieho tempa'],['eur','Prepočet na eurá','Suma v € pod hlavnou sumou']]],
- ['Štatistiky',[['avg','Priemery','Na odpracovaný deň a na kalendárny deň'],['best','Najlepší deň a záznamy','Rekord mesiaca, počet a priemer záznamu'],['compare','Porovnanie s minulým mesiacom','Rovnaké obdobie aj celý mesiac']]],
+ ['Štatistiky',[['minutes','Odtlmočené minúty','Čas hovorov podľa agentúry a zárobok na hodinu'],['avg','Priemery','Na odpracovaný deň a na pracovný deň'],['best','Najlepší deň a záznamy','Rekord mesiaca, počet a priemer záznamu'],['compare','Porovnanie s minulým mesiacom','Rovnaké obdobie aj celý mesiac']]],
  ['Grafy',[['cChart','Priebeh mesiaca','Kumulatívna čiara, cieľ a minulý mesiac'],['dChart','Denné zárobky','Tenké stĺpce po dňoch'],['mChart','Posledných 6 mesiacov','Porovnanie mesiacov'],['wChart','Podľa dňa v týždni','Ktoré dni sú najvýnosnejšie']]],
  ['Zoznamy',[['agencies','Rozpis podľa agentúry','Súčty a podiel agentúr'],['list','Záznamy','Zoznam po dňoch']]]
 ];
@@ -147,7 +152,7 @@ const DEF_AG=[{id:'magna',name:'Magna',on:true},{id:'dalang',name:'Dals',on:true
 let S=null;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
 if(!S||!S.agencies||!S.entries)S={name:'',rate:1.15,agencies:[],entries:[]};
 (function migrate(){
- S.goal=S.goal>0?S.goal:1000;if(!S.goalSet&&S.goal===100)S.goal=1000;S.rate=S.rate>0?S.rate:1.15;S.show=Object.assign({},DEF_SHOW,S.show||{});
+ S.goal=S.goal>0?S.goal:1000;if(!S.goalSet&&S.goal===100)S.goal=1000;if(!Array.isArray(S.workdays)||!S.workdays.length)S.workdays=[1,2,3,4,5];S.rate=S.rate>0?S.rate:1.15;S.show=Object.assign({},DEF_SHOW,S.show||{});
  DEF_AG.forEach(d=>{const a=S.agencies.find(x=>x.id===d.id);if(!a)S.agencies.push({...d});else if(d.id==='dalang'&&/^Dalang/.test(a.name))a.name='Dals'});
 })();
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
@@ -164,6 +169,11 @@ const agOn=id=>{const a=S.agencies.find(a=>a.id===id);return !!a&&a.on};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const dim=(y,m)=>new Date(y,m+1,0).getDate();
 const pad=n=>String(n).padStart(2,'0');
+const fmtMin=m=>{m=Math.round(m);const hh=Math.floor(m/60),r=m%60;return hh?hh+' h '+pad(r)+' min':r+' min'};
+const isWork=(y,m,d)=>S.workdays.indexOf(new Date(y,m,d).getDay())>=0;
+const workdays=(o,from,to)=>{let c=0;for(let i=Math.max(1,from);i<=to;i++)if(isWork(o.y,o.m,i))c++;return c};
+const plWd=n=>n===1?'pracovný deň':n<5?'pracovné dni':'pracovných dní';
+const parseMin=s=>{s=String(s||'').trim();if(!s)return null;const m=s.match(/^(\d+)\s*:\s*(\d{1,2})$/);if(m)return +m[1]*60+ +m[2];const v=num(s);return v>=0?v:NaN};
 
 function month(y,m){
  const p=y+'-'+pad(m+1),n=dim(y,m);
@@ -174,7 +184,7 @@ function month(y,m){
  const el=cur?now.getDate():past?n:0;
  const total=days.reduce((a,b)=>a+b,0);
  const worked=days.filter(v=>v>0).length;
- return {y,m,n,es,days,cur,past,el,total,worked};
+ const mins=es.reduce((a,e)=>a+(e.min||0),0);return {y,m,n,es,days,cur,past,el,total,worked,mins};
 }
 const upTo=(d,k)=>d.days.slice(1,k+1).reduce((a,b)=>a+b,0);
 function pm(y,m){m--;if(m<0){m=11;y--}return [y,m]}
@@ -208,10 +218,11 @@ function dChart(d){
  const ymax=niceMax(Math.max(...d.days.slice(1),1));
  const X=i=>PL+(i-0.5)/d.n*(W-PL-PR),Y_=v=>PT+(1-v/ymax)*(H-PT-PB),bw=Math.max(2,(W-PL-PR)/d.n*0.42);
  let s=frame(ymax,[1,8,15,22,d.n].filter(v=>v<=d.n).map(v=>[X(v),v]));
+ const sw=(W-PL-PR)/d.n;for(let i=1;i<=d.n;i++)if(!isWork(d.y,d.m,i))s+='<rect x="'+(X(i)-sw/2)+'" y="'+PT+'" width="'+sw+'" height="'+(H-PT-PB)+'" fill="var(--grid)" opacity=".6"/>';
  for(let i=1;i<=d.n;i++)if(d.days[i]>0)s+='<rect x="'+(X(i)-bw/2)+'" y="'+Y_(d.days[i])+'" width="'+bw+'" height="'+(H-PB-Y_(d.days[i]))+'" rx="1" fill="var(--ac)"/>';
  const aw=d.worked?d.total/d.worked:0;
  if(aw>0)s+='<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y_(aw)+'" y2="'+Y_(aw)+'" stroke="var(--tx2)" stroke-width="1" stroke-dasharray="3 3"/>';
- return s+'</svg><div class="leg"><span><i style="border-color:var(--ac)"></i>deň</span><span><i style="border-color:var(--tx2);border-top-style:dashed"></i>priemer na odpracovaný deň</span></div>';
+ return s+'</svg><div class="leg"><span><i style="border-color:var(--ac)"></i>deň</span><span><i style="border-color:var(--tx2);border-top-style:dashed"></i>priemer na odpracovaný deň</span><span>šedé pozadie = víkend</span></div>';
 }
 function mChart(d){
  const ms=[];let y=d.y,m=d.m;for(let i=0;i<6;i++){ms.unshift(month(y,m));[y,m]=pm(y,m)}
@@ -234,6 +245,28 @@ function wChart(d){
  return s+'</svg><div class="leg"><span>priemerný zárobok v odpracovaný deň</span></div>';
 }
 
+
+function minutesSection(d){
+ const [py,pmn]=pm(d.y,d.m),pd=month(py,pmn);
+ const on=S.agencies.filter(a=>a.on);
+ const rows=on.map(a=>{const es=d.es.filter(e=>e.agency===a.id);const mins=es.reduce((s,e)=>s+(e.min||0),0);
+  const wm=es.filter(e=>e.min>0);const amtM=wm.reduce((s,e)=>s+e.amount,0),minM=wm.reduce((s,e)=>s+e.min,0);
+  return {a:a,mins:mins,rate:minM>0?amtM/minM*60:null,n:es.length,noMin:es.filter(e=>!(e.min>0)&&e.amount>0).length}}).filter(r=>r.mins>0||r.n>0);
+ const tot=rows.reduce((s,r)=>s+r.mins,0);
+ if(!rows.length||tot<=0)return '<div class="empty">V tomto mesiaci zatiaľ nemáš zapísané minúty. Stiahnuté záznamy ich majú automaticky, pri ručných ich dopíš pri zápise sumy.</div>';
+ const allM=d.es.filter(e=>e.min>0),rateAll=allM.length?allM.reduce((s,e)=>s+e.amount,0)/allM.reduce((s,e)=>s+e.min,0)*60:null;
+ const wd=d.worked;
+ let b='<div class="g2"><div><div class="k">Spolu odtlmočené</div><div class="v">'+fmtMin(tot)+'</div></div><div><div class="k">Zárobok na hodinu</div><div class="v">'+(rateAll!=null?gbp(rateAll):'–')+'</div></div><div><div class="k">Minút / odpracovaný deň</div><div class="v">'+(wd?fmtMin(tot/wd):'–')+'</div></div>';
+ const pe=d.cur?Math.min(d.el,pd.n):pd.n;const pmins=pd.es.filter(e=>+e.date.slice(8,10)<=pe).reduce((s,e)=>s+(e.min||0),0);
+ const diff=tot-pmins;
+ b+='<div><div class="k">Oproti minulému mesiacu</div><div class="v '+(diff>=0?'up':'dn')+'">'+(diff>=0?'▲ ':'▼ ')+fmtMin(Math.abs(diff))+'</div></div></div>';
+ b+='<div style="margin-top:6px">'+rows.map(r=>{const p=tot?r.mins/tot*100:0,col=COL[S.agencies.indexOf(r.a)%COL.length];
+  return '<div class="ag"><div class="r"><span><span class="dot" style="background:'+col+'"></span>'+esc(r.a.name)+'</span><span><b>'+fmtMin(r.mins)+'</b> · '+(r.rate!=null?gbp(r.rate)+' / hod':'bez minút')+'</span></div><div class="bar"><i style="width:'+p+'%;background:'+col+'"></i></div></div>'}).join('')+'</div>';
+ const miss=rows.reduce((s,r)=>s+r.noMin,0);
+ if(miss)b+='<div class="note">Zárobok na hodinu sa počíta len zo záznamov s minútami ('+miss+' dní bez minút).</div>';
+ return b;
+}
+
 /* ---------- render ---------- */
 function sec(key,cap,body){return S.show[key]?'<section><p class="cap">'+cap+'</p>'+body+'</section>':''}
 function render(){
@@ -244,20 +277,22 @@ function render(){
  const pct=goal>0?d.total/goal:0,done=d.total>=goal;
  let h='<section><p class="cap">Zarobené</p><div class="big">'+gbp(d.total)+'</div>';
  if(sh.eur)h+='<div class="eur">≈ '+eur(d.total*S.rate)+'<span style="font-size:12px;color:var(--tx3)"> &nbsp;kurz '+S.rate.toLocaleString('sk-SK',{maximumFractionDigits:4})+'</span></div>';
+ if(sh.minutes&&d.mins>0)h+='<div class="eur" style="font-size:14px;margin-top:6px">Tlmočenie: '+fmtMin(d.mins)+'</div>';
+ const wl=d.cur?workdays(d,(d.days[d.el]>0?d.el+1:d.el),d.n):0;
  if(sh.goal){
   h+='<div class="prog"><i class="'+(done?'done':'')+'" style="width:'+Math.min(100,pct*100)+'%"></i></div><div class="pl"><span><b>'+nf(pct*100,0)+' %</b> cieľa</span><span>cieľ '+gbp(goal,0)+'</span></div>';
   if(done)h+='<div class="note"><b class="up">Cieľ splnený</b> · nad cieľom <b>'+gbp(d.total-goal)+'</b></div>';
   else if(sh.pace){
    const left=goal-d.total;
-   if(d.cur){const dl=d.n-d.el+1;h+='<div class="note">Zostáva <b>'+gbp(left)+'</b> · do konca mesiaca '+dl+' '+(dl===1?'deň':dl<5?'dni':'dní')+' · treba <b>'+gbp(left/dl)+'</b> denne</div>'}
+   if(d.cur){if(wl>0)h+='<div class="note">Zostáva <b>'+gbp(left)+'</b> · '+wl+' '+plWd(wl)+' · treba <b>'+gbp(left/wl)+'</b> na pracovný deň</div>';else h+='<div class="note">Zostáva <b>'+gbp(left)+'</b> · už nezostávajú pracovné dni mesiaca</div>'}
    else if(d.past)h+='<div class="note">Cieľ chýbal o <b class="dn">'+gbp(left)+'</b></div>';
    else h+='<div class="note">Zostáva <b>'+gbp(left)+'</b></div>';
   }
  }
  h+='</section>';
  if(sh.forecast&&d.cur){
-  const ac=d.el?d.total/d.el:0,pr=d.total+ac*(d.n-d.el),ok=pr>=goal;
-  h+='<section><p class="cap">Odhad na koniec mesiaca</p><div class="g2"><div><div class="k">Pri doterajšom tempe</div><div class="v">'+gbp(pr,0)+'</div><div class="k">≈ '+eur(pr*S.rate).replace(/,\d\d/,'')+'</div></div><div><div class="k">Voči cieľu</div><div class="v '+(ok?'up':'dn')+'">'+(ok?'+':'−')+gbp(Math.abs(pr-goal),0).replace('£ ','£ ')+'</div><div class="k">'+(ok?'cieľ by si splnil':'cieľ by sa nesplnil')+'</div></div></div></section>';
+  const aw0=d.worked?d.total/d.worked:0,pr=d.total+aw0*wl,ok=pr>=goal;
+  h+='<section><p class="cap">Odhad na koniec mesiaca</p><div class="g2"><div><div class="k">Pri tempe, ešte '+wl+' '+plWd(wl)+'</div><div class="v">'+gbp(pr,0)+'</div><div class="k">≈ '+eur(pr*S.rate).replace(/,\d\d/,'')+'</div></div><div><div class="k">Voči cieľu</div><div class="v '+(ok?'up':'dn')+'">'+(ok?'+':'−')+gbp(Math.abs(pr-goal),0).replace('£ ','£ ')+'</div><div class="k">'+(ok?'cieľ by si splnil':'cieľ by sa nesplnil')+'</div></div></div></section>';
  }
  if(sh.compare){
   const ref=d.cur?upTo(pd,Math.min(d.el,pd.n)):pd.total,diff=d.total-ref,pc=ref>0?diff/ref*100:null,lab=d.cur?'rovnaké obdobie minulého mesiaca':'minulý mesiac';
@@ -267,14 +302,15 @@ function render(){
  }
  if(sh.avg||sh.best){
   let b='<div class="g2">';
-  if(sh.avg){const aw=d.worked?d.total/d.worked:0,ac=d.el?d.total/d.el:0;
-   b+='<div><div class="k">Priemer / odpracovaný deň</div><div class="v">'+(d.worked?gbp(aw):'–')+'</div></div><div><div class="k">Priemer / kalendárny deň</div><div class="v">'+(d.el?gbp(ac):'–')+'</div></div><div><div class="k">Odpracované dni</div><div class="v">'+d.worked+' <small>z '+(d.cur?d.el:d.n)+'</small></div></div>';
+  if(sh.avg){const aw=d.worked?d.total/d.worked:0,wde=workdays(d,1,d.el),ac=wde?d.total/wde:0;let wk=0;for(let i=1;i<=d.n;i++)if(d.days[i]>0&&!isWork(d.y,d.m,i))wk++;
+   b+='<div><div class="k">Priemer / odpracovaný deň</div><div class="v">'+(d.worked?gbp(aw):'–')+'</div></div><div><div class="k">Priemer / pracovný deň</div><div class="v">'+(wde?gbp(ac):'–')+'</div></div><div><div class="k">Odpracované dni</div><div class="v">'+d.worked+' <small>z '+wde+' pracovných'+(wk?' · '+wk+' cez víkend':'')+'</small></div></div>';
    if(!sh.best)b+='<div></div>'}
   if(sh.best){let bi=0;d.days.forEach((v,i)=>{if(i&&v>d.days[bi])bi=i});const avgE=d.es.length?d.total/d.es.length:0;
    if(!sh.avg)b+='<div><div class="k">Odpracované dni</div><div class="v">'+d.worked+'</div></div>';
    b+='<div><div class="k">Najlepší deň</div><div class="v">'+(bi?gbp(d.days[bi]):'–')+(bi?' <small>'+bi+'. '+(M+1)+'.</small>':'')+'</div></div><div><div class="k">Záznamov</div><div class="v">'+d.es.length+'</div></div><div><div class="k">Priemer na záznam</div><div class="v">'+(d.es.length?gbp(avgE):'–')+'</div></div>'}
   h+='<section><p class="cap">Štatistiky</p>'+b+'</div></section>';
  }
+ h+=sec('minutes','Odtlmočené minúty',minutesSection(d));
  h+=sec('cChart','Priebeh mesiaca',cChart(d));
  h+=sec('dChart','Denné zárobky',dChart(d));
  h+=sec('mChart','Posledných 6 mesiacov',mChart(d));
@@ -284,7 +320,7 @@ function render(){
   return '<div class="ag"><div class="r"><span><span class="dot" style="background:'+COL[S.agencies.indexOf(a)%COL.length]+'"></span>'+esc(a.name)+'</span><span><b>'+gbp(v)+'</b>'+(sh.eur?' · '+eur(v*S.rate):'')+'</span></div><div class="bar"><i style="width:'+p+'%;background:'+COL[S.agencies.indexOf(a)%COL.length]+'"></i></div></div>'}).join(''):'<div class="empty">Žiadna zapnutá agentúra. Zapni ich v nastaveniach.</div>');
  const es=d.es.slice().sort((a,b)=>b.date.localeCompare(a.date)||String(b.id).localeCompare(String(a.id)));let l='',last='';
  for(const e of es){if(e.date!==last){last=e.date;const x=new Date(e.date+'T12:00:00');l+='<div class="day">'+DN[x.getDay()]+' '+x.getDate()+'. '+(x.getMonth()+1)+'.</div>'}
-  l+='<div class="row" data-id="'+e.id+'"><div><div>'+esc(agName(e.agency))+'</div>'+(e.note?'<div class="a">'+esc(e.note)+'</div>':'')+'</div><div class="m">'+gbp(e.amount)+'</div></div>'}
+  l+='<div class="row" data-id="'+e.id+'"><div><div>'+esc(agName(e.agency))+'</div>'+(e.note?'<div class="a">'+esc(e.note)+'</div>':'')+'</div><div class="m" style="text-align:right">'+gbp(e.amount)+(e.min>0?'<div class="a" style="font-weight:400">'+fmtMin(e.min)+'</div>':'')+'</div></div>'}
  h+=sec('list','Záznamy',l||'<div class="empty">V tomto mesiaci zatiaľ nič. Ťukni na „Pridať sumu“.</div>');
  $('main').innerHTML=h;
  document.querySelectorAll('.row').forEach(r=>r.onclick=()=>openAdd(r.dataset.id));
@@ -302,7 +338,7 @@ function openAdd(id){
  if(e&&e.auto){alert('Tento záznam je stiahnutý z portálu a pri ďalšej aktualizácii sa prepíše. Ručne ho upraviť nemôžeš.');return}
  $('t1').textContent=e?'Upraviť záznam':'Nová suma';
  $('amount').value=e?String(e.amount).replace('.',','):'';
- $('date').value=e?e.date:ymd(new Date());$('note').value=e?(e.note||''):'';
+ $('date').value=e?e.date:ymd(new Date());$('note').value=e?(e.note||''):'';$('mins').value=(e&&e.min>0)?String(Math.round(e.min*100)/100).replace('.',','):'';
  selAg=e?e.agency:((S.lastAg&&agOn(S.lastAg))?S.lastAg:(S.agencies.find(a=>a.on)||{}).id);
  $('del').style.display=e?'block':'none';$('err1').textContent='';chips();$('sh1').classList.add('on');
  if(!e)setTimeout(()=>$('amount').focus(),150);
@@ -316,7 +352,9 @@ $('s1').onclick=()=>{
  if(!(a>0)){$('err1').textContent='Zadaj sumu väčšiu ako 0.';return}
  if(!selAg){$('err1').textContent='Vyber agentúru.';return}
  if(!$('date').value){$('err1').textContent='Vyber dátum.';return}
- const o={date:$('date').value,agency:selAg,amount:r2(a),note:$('note').value.trim()};
+ const mv=parseMin($('mins').value);
+ if(mv!==null&&!(mv>=0)){$('err1').textContent='Minúty zadaj ako číslo (35) alebo h:mm (1:20).';return}
+ const o={date:$('date').value,agency:selAg,amount:r2(a),note:$('note').value.trim(),min:mv>0?Math.round(mv*100)/100:undefined};
  if(editId){Object.assign(S.entries.find(x=>String(x.id)===String(editId)),o)}else{o.id=Date.now();S.entries.push(o)}
  S.lastAg=selAg;save();
  const d=new Date(o.date+'T12:00:00');Y=d.getFullYear();M=d.getMonth();
@@ -327,6 +365,11 @@ $('prev').onclick=()=>{M--;if(M<0){M=11;Y--}render()};
 $('next').onclick=()=>{M++;if(M>11){M=0;Y++}render()};
 
 /* ---------- settings ---------- */
+const WDORDER=[[1,'Po'],[2,'Ut'],[3,'St'],[4,'Št'],[5,'Pi'],[6,'So'],[0,'Ne']];
+function wdset(){
+ $('wdset').innerHTML=WDORDER.map(x=>'<button class="chip'+(S.workdays.indexOf(x[0])>=0?' on':'')+'" data-d="'+x[0]+'">'+x[1]+'</button>').join('');
+ document.querySelectorAll('#wdset .chip').forEach(c=>c.onclick=()=>{const d=+c.dataset.d,i=S.workdays.indexOf(d);if(i>=0){if(S.workdays.length>1)S.workdays.splice(i,1)}else S.workdays.push(d);save();wdset();render()});
+}
 function agset(){
  $('agset').innerHTML=S.agencies.map(a=>'<div class="sw"><span>'+esc(a.name)+'</span><button class="tg'+(a.on?' on':'')+'" data-a="'+a.id+'" aria-label="'+esc(a.name)+'"></button></div>').join('');
  document.querySelectorAll('#agset .tg').forEach(t=>t.onclick=()=>{const a=S.agencies.find(x=>x.id===t.dataset.a);a.on=!a.on;save();agset();render()});
@@ -335,7 +378,7 @@ function viewset(){
  $('viewset').innerHTML=VIEW.map(g=>'<div class="sub">'+g[0]+'</div>'+g[1].map(x=>'<div class="sw"><span>'+x[1]+'<small>'+x[2]+'</small></span><button class="tg'+(S.show[x[0]]?' on':'')+'" data-k="'+x[0]+'" aria-label="'+x[1]+'"></button></div>').join('')).join('');
  document.querySelectorAll('#viewset .tg').forEach(t=>t.onclick=()=>{S.show[t.dataset.k]=!S.show[t.dataset.k];save();viewset();render()});
 }
-$('gear').onclick=()=>{infoTexts();$('name').value=S.name||'';$('rateIn').value=String(S.rate).replace('.',',');$('goalIn').value=String(S.goal).replace('.',',');$('err2').textContent='';$('bk').style.display='none';agset();viewset();$('sh2').classList.add('on')};
+$('gear').onclick=()=>{infoTexts();$('name').value=S.name||'';$('rateIn').value=String(S.rate).replace('.',',');$('goalIn').value=String(S.goal).replace('.',',');$('err2').textContent='';$('bk').style.display='none';agset();viewset();wdset();$('sh2').classList.add('on')};
 $('addag').onclick=()=>{const n=$('newag').value.trim();if(!n)return;S.agencies.push({id:'a'+Date.now(),name:n,on:true});$('newag').value='';save();agset();render()};
 function applyText(){
  const r=num($('rateIn').value),g=num($('goalIn').value);
@@ -351,7 +394,7 @@ $('imp').onclick=()=>{
  if(b.style.display==='none'){b.style.display='block';b.value='';b.focus();$('err2').textContent='Vlož text zálohy a ťukni znova na „Obnoviť zo zálohy“.';return}
  try{const d=JSON.parse(b.value);if(!d.agencies||!d.entries)throw 0;if(!confirm('Prepísať všetky údaje v tejto appke zálohou?'))return;S=d;migrate2();save();b.style.display='none';$('sh2').classList.remove('on');render()}catch(e){$('err2').textContent='Záloha sa nedá prečítať.'}
 };
-function migrate2(){S.goal=S.goal>0?S.goal:1000;S.rate=S.rate>0?S.rate:1.15;S.show=Object.assign({},DEF_SHOW,S.show||{});DEF_AG.forEach(d=>{if(!S.agencies.find(x=>x.id===d.id))S.agencies.push({...d})})}
+function migrate2(){S.goal=S.goal>0?S.goal:1000;if(!Array.isArray(S.workdays)||!S.workdays.length)S.workdays=[1,2,3,4,5];S.rate=S.rate>0?S.rate:1.15;S.show=Object.assign({},DEF_SHOW,S.show||{});DEF_AG.forEach(d=>{if(!S.agencies.find(x=>x.id===d.id))S.agencies.push({...d})})}
 
 /* ---------- Portal import (Dalang, Magna) ---------- */
 const HAS=()=>!!window.Android&&typeof Android.importPortal==='function';
@@ -378,17 +421,18 @@ function openImport(){
 $('dal').onclick=openImport;
 $('dal2').onclick=()=>{$('sh2').classList.remove('on');openImport()};
 $('c3').onclick=()=>$('sh3').classList.remove('on');
+const durMin=s=>{const m=String(s||'').match(/^(\d+):(\d{2}):(\d{2})$/);return m?(+m[1])*60+(+m[2])+(+m[3])/60:0};
 window.onImport=function(portal,str){
  const cfg=AUTO[portal]||{label:portal,unit:['záznam','záznamy','záznamov']};
  let d;try{d=JSON.parse(str)}catch(e){alert(cfg.label+': údaje sa nedajú prečítať.');queue=[];return}
  const byDay={};
- (d.sessions||[]).forEach(s=>{const p=s.date.split('/');const iso=p[2]+'-'+p[1]+'-'+p[0];const o=(byDay[iso]=byDay[iso]||{sum:0,n:0,c:0});o.sum+=s.pay;o.n++;if(s.cancelled)o.c++});
+ (d.sessions||[]).forEach(s=>{const p=s.date.split('/');const iso=p[2]+'-'+p[1]+'-'+p[0];const o=(byDay[iso]=byDay[iso]||{sum:0,n:0,c:0,min:0});o.sum+=s.pay;o.n++;if(s.cancelled)o.c++;o.min+=(s.min!=null?s.min:durMin(s.dur))});
  const pre=d.y+'-'+pad(d.m)+'-';
  S.entries=S.entries.filter(e=>!(e.auto&&e.agency===portal&&e.date.startsWith(pre)));
  let sum=0,n=0;
  Object.keys(byDay).sort().forEach(iso=>{const v=byDay[iso];sum+=v.sum;n+=v.n;
   const u=v.n===1?cfg.unit[0]:v.n<5?cfg.unit[1]:cfg.unit[2];
-  S.entries.push({id:'auto-'+portal+'-'+iso,date:iso,agency:portal,amount:Math.round(v.sum*1000)/1000,note:cfg.label+' · '+v.n+' '+u+(v.c?' (z toho '+v.c+' zrušený)':''),auto:true})});
+  S.entries.push({id:'auto-'+portal+'-'+iso,date:iso,agency:portal,amount:Math.round(v.sum*1000)/1000,min:Math.round(v.min*100)/100,note:cfg.label+' · '+v.n+' '+u+(v.c?' (z toho '+v.c+' zrušený)':''),auto:true})});
  S['last_'+portal]=new Date().toISOString();save();
  Y=d.y;M=d.m-1;render();
  const man=S.entries.filter(e=>!e.auto&&e.agency===portal&&e.date.startsWith(pre)).length;
