@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="sk"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Habana</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#14181d;--tx2:#5d6873;--tx3:#8b95a0;--bd:#e3e7eb;--ac:#1f6fb5;--acbg:#e8f1fa;--ok:#0f7a5c;--okbg:#e3f5ee;--bad:#b23a3a;--badbg:#fbeaea;--grid:#e9ecef}
+@media(prefers-color-scheme:dark){:root{--bg:#101316;--card:#171b1f;--tx:#eef1f4;--tx2:#9aa6b0;--tx3:#6e7a85;--bd:#2a3036;--ac:#6aaeea;--acbg:#13293f;--ok:#4fc9a2;--okbg:#0d2e25;--bad:#f09a9a;--badbg:#3a1818;--grid:#22282d}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:110px;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 4px}
+h1{font-size:17px;margin:0;font-weight:500;letter-spacing:.2px}
+.ic{width:40px;height:40px;border-radius:20px;display:inline-flex;align-items:center;justify-content:center;color:var(--tx2)}
+.ic:active{background:var(--bd)}
+.ic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.mon{display:flex;align-items:center;justify-content:center;gap:4px;padding:0 16px 6px}
+.mon b{font-size:15px;min-width:150px;text-align:center;font-weight:500}
+.wrap{padding:0 16px}
+section{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:12px}
+.cap{font-size:11px;letter-spacing:.9px;text-transform:uppercase;color:var(--tx3);margin:0 0 12px;font-weight:500}
+.big{font-size:38px;font-weight:300;letter-spacing:-1px;line-height:1.1}
+.eur{font-size:17px;color:var(--tx2);font-weight:300;margin-top:2px}
+.prog{height:3px;background:var(--grid);border-radius:2px;margin:16px 0 8px;position:relative}
+.prog i{position:absolute;left:0;top:0;height:3px;border-radius:2px;background:var(--ac)}
+.prog i.done{background:var(--ok)}
+.pl{display:flex;justify-content:space-between;font-size:13px;color:var(--tx2)}
+.pl b{color:var(--tx);font-weight:500}
+.note{font-size:13px;color:var(--tx2);margin-top:10px;padding-top:10px;border-top:1px solid var(--grid)}
+.note b{color:var(--tx);font-weight:500}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.g2>div{padding:10px 0;border-top:1px solid var(--grid)}
+.g2>div:nth-child(-n+2){border-top:0;padding-top:0}
+.g2>div:nth-child(odd){padding-right:12px;border-right:1px solid var(--grid)}
+.g2>div:nth-child(even){padding-left:14px}
+.k{font-size:12px;color:var(--tx3)}.v{font-size:19px;font-weight:400;margin-top:2px}.v small{font-size:12px;color:var(--tx2)}
+.up{color:var(--ok)}.dn{color:var(--bad)}
+.ag{margin:12px 0}.ag .r{display:flex;justify-content:space-between;gap:8px;font-size:14px}.ag .r span:last-child{color:var(--tx2)}.ag .r b{font-weight:500;color:var(--tx)}
+.bar{height:3px;background:var(--grid);margin-top:6px;border-radius:2px}.bar i{display:block;height:3px;border-radius:2px}
+.day{font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--tx3);margin:14px 0 0;font-weight:500}
+.row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--grid);gap:10px}
+.day+.row{border-top:0}
+.row .a{font-size:12px;color:var(--tx3)}.row .m{font-weight:500;white-space:nowrap}
+.dot{display:inline-block;width:7px;height:7px;border-radius:4px;margin-right:8px}
+.empty{color:var(--tx3);text-align:center;padding:14px 8px;font-size:13px}
+svg.ch{width:100%;height:auto;display:block;overflow:visible}
+svg.ch text{font-size:9.5px;fill:var(--tx3);font-family:inherit}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--tx2);margin-top:8px}
+.leg i{display:inline-block;width:14px;height:0;border-top:1.5px solid;vertical-align:middle;margin-right:5px}
+.fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));background:var(--ac);color:var(--bg);border-radius:28px;padding:14px 22px;font-weight:500;font-size:15px;box-shadow:0 1px 6px rgba(0,0,0,.22);display:flex;gap:8px;align-items:center}
+@media(prefers-color-scheme:light){.fab{color:#fff}}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;z-index:10}
+.sheet.on{display:flex}
+.panel{background:var(--card);width:100%;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+.panel h3{margin:0 0 6px;font-size:18px;font-weight:500}
+.grp{font-size:11px;letter-spacing:.9px;text-transform:uppercase;color:var(--tx3);margin:22px 0 4px;font-weight:500;padding-bottom:6px;border-bottom:1px solid var(--bd)}
+.sub{font-size:12px;color:var(--tx3);margin:10px 0 0}
+label{display:block;font-size:12px;color:var(--tx3);margin:12px 0 4px}
+input,textarea{width:100%;font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:11px}
+input:focus,textarea:focus{outline:0;border-color:var(--ac)}
+input.amt{font-size:28px;font-weight:300}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.chip{padding:8px 14px;border-radius:18px;background:var(--bg);border:1px solid var(--bd);font-size:14px}
+.chip.on{background:var(--acbg);border-color:var(--ac);color:var(--ac)}
+.btns{display:flex;gap:10px;margin-top:18px}
+.btn{flex:1;padding:13px;border-radius:12px;font-weight:500;background:var(--bg);border:1px solid var(--bd);text-align:center}
+.btn.p{background:var(--ac);color:#fff;border-color:var(--ac)}
+@media(prefers-color-scheme:dark){.btn.p{color:#0b1620}}
+.btn.d{color:var(--bad);background:var(--badbg);border-color:transparent}
+.sw{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--grid);gap:8px;font-size:15px}
+.sw small{display:block;color:var(--tx3);font-size:12px}
+.tg{width:44px;height:26px;border-radius:13px;background:var(--bd);position:relative;flex:none}
+.tg::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:10px;background:#fff;transition:.15s}
+.tg.on{background:var(--ok)}.tg.on::after{left:21px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hint{font-size:12px;color:var(--tx3);margin-top:6px}
+.upd{margin:0 16px 12px;padding:12px 14px;border-radius:12px;background:var(--acbg);color:var(--ac);font-size:14px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.upd button{padding:8px 14px;border-radius:10px;background:var(--ac);color:#fff;font-weight:500;flex:none}
+.err{color:var(--bad);font-size:13px;margin-top:8px;min-height:0}
+</style></head><body>
+<header><h1 id="who">Habana</h1><span style="display:flex"><button class="ic" id="dal" aria-label="Aktualizovať údaje z portálov" style="display:none"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg></button><button class="ic" id="gear" aria-label="Nastavenia"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></span></header>
+<div class="mon"><button class="ic" id="prev" aria-label="Predošlý mesiac"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button><b id="mlabel"></b><button class="ic" id="next" aria-label="Ďalší mesiac"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button></div>
+<div id="upd" class="upd" style="display:none"></div>
+<div class="wrap" id="main"></div>
+<button class="fab" id="add"><svg viewBox="0 0 24 24" width="18" height="18" style="stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round"><path d="M12 5v14M5 12h14"/></svg>Pridať sumu</button>
+
+<div class="sheet" id="sh1"><div class="panel">
+ <h3 id="t1">Nová suma</h3>
+ <label>Suma (£)</label><input class="amt" id="amount" inputmode="decimal" placeholder="0,00" autocomplete="off">
+ <label>Agentúra</label><div class="chips" id="agchips"></div>
+ <label>Dátum</label><input type="date" id="date"><div class="chips"><button class="chip" id="today">Dnes</button><button class="chip" id="yday">Včera</button></div>
+ <label>Poznámka (nepovinné)</label><input id="note" placeholder="napr. 3 hovory" autocomplete="off">
+ <div class="err" id="err1"></div>
+ <div class="btns"><button class="btn d" id="del" style="display:none">Zmazať</button><button class="btn" id="c1">Zrušiť</button><button class="btn p" id="s1">Uložiť</button></div>
+</div></div>
+
+<div class="sheet" id="sh2"><div class="panel">
+ <h3>Nastavenia</h3>
+ <div class="grp">Profil</div>
+ <label>Tvoje meno</label><input id="name" autocomplete="off">
+
+ <div class="grp">Cieľ a kurz</div>
+ <div class="two"><div><label>Očakávané príjmy / cieľ (£)</label><input id="goalIn" inputmode="decimal" autocomplete="off"></div><div><label>1 £ = ? €</label><input id="rateIn" inputmode="decimal" autocomplete="off"></div></div>
+ <div class="hint">Očakávané mesačné príjmy (cieľ) platia pre každý mesiac. Kurz ovplyvní prepočet na eurá.</div>
+
+ <div class="grp">Agentúry</div>
+ <div id="agset"></div>
+ <div style="display:flex;gap:8px;margin-top:10px"><input id="newag" placeholder="Nová agentúra" autocomplete="off"><button class="btn" id="addag" style="flex:none;padding:0 16px">Pridať</button></div>
+
+ <div class="grp">Automatické sťahovanie</div>
+ <div class="hint" id="dalinfo" style="margin-top:8px"></div>
+ <div class="btns" style="margin-top:8px"><button class="btn" id="dal2">Aktualizovať údaje z portálov</button></div>
+ <div class="grp">Aplikácia</div>
+ <div class="hint" id="verinfo" style="margin-top:8px"></div>
+ <div class="btns" style="margin-top:8px"><button class="btn" id="updchk">Skontrolovať aktualizácie</button></div>
+
+ <div class="grp">Zobrazenie</div>
+ <div id="viewset"></div>
+
+ <div class="grp">Záloha údajov</div>
+ <div class="btns" style="margin-top:8px"><button class="btn" id="exp">Odoslať zálohu</button><button class="btn" id="imp">Obnoviť zo zálohy</button></div>
+ <textarea id="bk" rows="3" style="display:none;margin-top:8px" placeholder="Sem vlož text zálohy"></textarea>
+ <div class="err" id="err2"></div>
+ <div class="btns"><button class="btn p" id="c2">Hotovo</button></div>
+</div></div>
+
+<div class="sheet" id="sh3"><div class="panel">
+ <h3>Aktualizovať údaje</h3>
+ <div class="hint" style="margin-bottom:6px">Stiahne sa mesiac, ktorý máš práve otvorený. Pri prvom použití sa prihlásiš do portálu v okne appky.</div>
+ <div id="impbtns"></div>
+ <div class="btns"><button class="btn" id="c3">Zavrieť</button></div>
+</div></div>
+
+<script>
+const KEY='prijmy.v1',COL=['#1f6fb5','#1d9e75','#ba7517','#7f77dd','#d4537e','#d85a30'];
+const MN=['Január','Február','Marec','Apríl','Máj','Jún','Júl','August','September','Október','November','December'];
+const MS=['Jan','Feb','Mar','Apr','Máj','Jún','Júl','Aug','Sep','Okt','Nov','Dec'];
+const DN=['Nedeľa','Pondelok','Utorok','Streda','Štvrtok','Piatok','Sobota'];
+const WD=['Po','Ut','St','Št','Pi','So','Ne'];
+const VIEW=[
+ ['Ciele a tempo',[['goal','Cieľ mesiaca','Ukazovateľ, ako ďaleko si od cieľa'],['pace','Potrebný denný zárobok','Koľko treba denne do konca mesiaca'],['forecast','Odhad na koniec mesiaca','Podľa doterajšieho tempa'],['eur','Prepočet na eurá','Suma v € pod hlavnou sumou']]],
+ ['Štatistiky',[['avg','Priemery','Na odpracovaný deň a na kalendárny deň'],['best','Najlepší deň a záznamy','Rekord mesiaca, počet a priemer záznamu'],['compare','Porovnanie s minulým mesiacom','Rovnaké obdobie aj celý mesiac']]],
+ ['Grafy',[['cChart','Priebeh mesiaca','Kumulatívna čiara, cieľ a minulý mesiac'],['dChart','Denné zárobky','Tenké stĺpce po dňoch'],['mChart','Posledných 6 mesiacov','Porovnanie mesiacov'],['wChart','Podľa dňa v týždni','Ktoré dni sú najvýnosnejšie']]],
+ ['Zoznamy',[['agencies','Rozpis podľa agentúry','Súčty a podiel agentúr'],['list','Záznamy','Zoznam po dňoch']]]
+];
+const DEF_SHOW={};VIEW.forEach(g=>g[1].forEach(x=>{DEF_SHOW[x[0]]=true}));
+const DEF_AG=[{id:'magna',name:'Magna',on:true},{id:'dalang',name:'Dals',on:true},{id:'bigword',name:'BigWord',on:false},{id:'other',name:'Iné príjmy',on:true}];
+let S=null;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!S||!S.agencies||!S.entries)S={name:'',rate:1.15,agencies:[],entries:[]};
+(function migrate(){
+ S.goal=S.goal>0?S.goal:1000;if(!S.goalSet&&S.goal===100)S.goal=1000;S.rate=S.rate>0?S.rate:1.15;S.show=Object.assign({},DEF_SHOW,S.show||{});
+ DEF_AG.forEach(d=>{const a=S.agencies.find(x=>x.id===d.id);if(!a)S.agencies.push({...d});else if(d.id==='dalang'&&/^Dalang/.test(a.name))a.name='Dals'});
+})();
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const $=id=>document.getElementById(id);
+const now=new Date();let Y=now.getFullYear(),M=now.getMonth();
+const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const num=s=>{const n=parseFloat(String(s).replace(/\s/g,'').replace(',','.'));return isFinite(n)?n:NaN};
+const r2=n=>Math.round(n*100)/100;
+const nf=(n,d=2)=>(d?r2(n):Math.round(n)).toLocaleString('sk-SK',{minimumFractionDigits:d,maximumFractionDigits:d});
+const gbp=(n,d=2)=>'£ '+nf(n,d);
+const eur=n=>nf(n)+' €';
+const agName=id=>(S.agencies.find(a=>a.id===id)||{name:'(zmazaná)'}).name;
+const agOn=id=>{const a=S.agencies.find(a=>a.id===id);return !!a&&a.on};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const dim=(y,m)=>new Date(y,m+1,0).getDate();
+const pad=n=>String(n).padStart(2,'0');
+
+function month(y,m){
+ const p=y+'-'+pad(m+1),n=dim(y,m);
+ const es=S.entries.filter(e=>e.date.startsWith(p)&&agOn(e.agency));
+ const days=new Array(n+1).fill(0);es.forEach(e=>days[+e.date.slice(8,10)]+=e.amount);
+ const cur=y===now.getFullYear()&&m===now.getMonth();
+ const past=y<now.getFullYear()||(y===now.getFullYear()&&m<now.getMonth());
+ const el=cur?now.getDate():past?n:0;
+ const total=days.reduce((a,b)=>a+b,0);
+ const worked=days.filter(v=>v>0).length;
+ return {y,m,n,es,days,cur,past,el,total,worked};
+}
+const upTo=(d,k)=>d.days.slice(1,k+1).reduce((a,b)=>a+b,0);
+function pm(y,m){m--;if(m<0){m=11;y--}return [y,m]}
+
+/* ---------- SVG charts ---------- */
+const W=340,H=150,PL=34,PR=8,PT=10,PB=20;
+function frame(ymax,xl,fx){
+ let s='<svg class="ch" viewBox="0 0 '+W+' '+H+'" role="img">';
+ for(let i=0;i<=3;i++){const v=ymax*i/3,y=PT+(1-i/3)*(H-PT-PB);s+='<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+y+'" y2="'+y+'" stroke="var(--grid)" stroke-width="1"/><text x="'+(PL-5)+'" y="'+(y+3)+'" text-anchor="end">'+nf(v,0)+'</text>'}
+ xl.forEach(([x,t])=>{s+='<text x="'+x+'" y="'+(H-5)+'" text-anchor="middle">'+t+'</text>'});
+ return s;
+}
+const niceMax=v=>{if(v<=0)return 30;const p=Math.pow(10,Math.floor(Math.log10(v)));const f=v/p;return (f<=1?1:f<=2?2:f<=3?3:f<=5?5:10)*p};
+function cChart(d){
+ const [py,pmn]=pm(d.y,d.m),pd=month(py,pmn);
+ const cum=[0];for(let i=1;i<=d.el;i++)cum[i]=cum[i-1]+d.days[i];
+ const pc=[0];for(let i=1;i<=pd.n;i++)pc[i]=pc[i-1]+pd.days[i];
+ const avgCal=d.el?d.total/d.el:0,proj=d.cur?d.total+avgCal*(d.n-d.el):d.total;
+ const ymax=niceMax(Math.max(S.goal,d.total,proj*(d.cur?1:0),pd.total,1));
+ const X=i=>PL+(i-1)/(d.n-1)*(W-PL-PR),Y_=v=>PT+(1-v/ymax)*(H-PT-PB);
+ let s=frame(ymax,[1,8,15,22,d.n].filter(v=>v<=d.n).map(v=>[X(v),v]));
+ s+='<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y_(S.goal)+'" y2="'+Y_(S.goal)+'" stroke="var(--ok)" stroke-width="1" stroke-dasharray="3 3"/>';
+ const pp=[];for(let i=1;i<=Math.min(pd.n,d.n);i++)pp.push(X(i)+','+Y_(pc[i]));
+ if(pd.total>0)s+='<polyline points="'+pp.join(' ')+'" fill="none" stroke="var(--tx3)" stroke-width="1" stroke-dasharray="2 3"/>';
+ if(d.cur&&d.el<d.n&&d.el>0)s+='<line x1="'+X(d.el)+'" y1="'+Y_(cum[d.el])+'" x2="'+X(d.n)+'" y2="'+Y_(proj)+'" stroke="var(--ac)" stroke-width="1" stroke-dasharray="1.5 3" opacity=".7"/>';
+ if(d.el>0){const pts=[];for(let i=1;i<=d.el;i++)pts.push(X(i)+','+Y_(cum[i]));
+  s+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="var(--ac)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="'+X(d.el)+'" cy="'+Y_(cum[d.el])+'" r="2.8" fill="var(--ac)"/>'}
+ return s+'</svg><div class="leg"><span><i style="border-color:var(--ac)"></i>tento mesiac</span><span><i style="border-color:var(--tx3);border-top-style:dotted"></i>minulý mesiac</span><span><i style="border-color:var(--ok);border-top-style:dashed"></i>cieľ</span>'+(d.cur?'<span><i style="border-color:var(--ac);border-top-style:dotted"></i>odhad</span>':'')+'</div>';
+}
+function dChart(d){
+ const ymax=niceMax(Math.max(...d.days.slice(1),1));
+ const X=i=>PL+(i-0.5)/d.n*(W-PL-PR),Y_=v=>PT+(1-v/ymax)*(H-PT-PB),bw=Math.max(2,(W-PL-PR)/d.n*0.42);
+ let s=frame(ymax,[1,8,15,22,d.n].filter(v=>v<=d.n).map(v=>[X(v),v]));
+ for(let i=1;i<=d.n;i++)if(d.days[i]>0)s+='<rect x="'+(X(i)-bw/2)+'" y="'+Y_(d.days[i])+'" width="'+bw+'" height="'+(H-PB-Y_(d.days[i]))+'" rx="1" fill="var(--ac)"/>';
+ const aw=d.worked?d.total/d.worked:0;
+ if(aw>0)s+='<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y_(aw)+'" y2="'+Y_(aw)+'" stroke="var(--tx2)" stroke-width="1" stroke-dasharray="3 3"/>';
+ return s+'</svg><div class="leg"><span><i style="border-color:var(--ac)"></i>deň</span><span><i style="border-color:var(--tx2);border-top-style:dashed"></i>priemer na odpracovaný deň</span></div>';
+}
+function mChart(d){
+ const ms=[];let y=d.y,m=d.m;for(let i=0;i<6;i++){ms.unshift(month(y,m));[y,m]=pm(y,m)}
+ const ymax=niceMax(Math.max(S.goal,...ms.map(x=>x.total),1));
+ const slot=(W-PL-PR)/6,bw=Math.min(26,slot*0.4),Y_=v=>PT+(1-v/ymax)*(H-PT-PB);
+ let s=frame(ymax,ms.map((x,i)=>[PL+slot*(i+.5),MS[x.m]]));
+ ms.forEach((x,i)=>{const cx=PL+slot*(i+.5),last=i===5;
+  if(x.total>0){s+='<rect x="'+(cx-bw/2)+'" y="'+Y_(x.total)+'" width="'+bw+'" height="'+(H-PB-Y_(x.total))+'" rx="1.5" fill="var(--ac)" opacity="'+(last?1:.45)+'"/><text x="'+cx+'" y="'+(Y_(x.total)-4)+'" text-anchor="middle" style="fill:var(--tx2)">'+nf(x.total,0)+'</text>'}});
+ s+='<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y_(S.goal)+'" y2="'+Y_(S.goal)+'" stroke="var(--ok)" stroke-width="1" stroke-dasharray="3 3"/>';
+ return s+'</svg><div class="leg"><span><i style="border-color:var(--ac)"></i>mesiac</span><span><i style="border-color:var(--ok);border-top-style:dashed"></i>cieľ</span></div>';
+}
+function wChart(d){
+ const sum=new Array(7).fill(0),cnt=new Array(7).fill(0);
+ for(let i=1;i<=d.n;i++){if(d.days[i]>0){const w=(new Date(d.y,d.m,i).getDay()+6)%7;sum[w]+=d.days[i];cnt[w]++}}
+ const avg=sum.map((v,i)=>cnt[i]?v/cnt[i]:0),ymax=niceMax(Math.max(...avg,1));
+ const slot=(W-PL-PR)/7,bw=Math.min(22,slot*.4),Y_=v=>PT+(1-v/ymax)*(H-PT-PB);
+ let s=frame(ymax,WD.map((t,i)=>[PL+slot*(i+.5),t]));
+ const best=avg.indexOf(Math.max(...avg));
+ avg.forEach((v,i)=>{const cx=PL+slot*(i+.5);if(v>0)s+='<rect x="'+(cx-bw/2)+'" y="'+Y_(v)+'" width="'+bw+'" height="'+(H-PB-Y_(v))+'" rx="1.5" fill="var(--ac)" opacity="'+(i===best?1:.45)+'"/><text x="'+cx+'" y="'+(Y_(v)-4)+'" text-anchor="middle" style="fill:var(--tx2)">'+nf(v,0)+'</text>'});
+ return s+'</svg><div class="leg"><span>priemerný zárobok v odpracovaný deň</span></div>';
+}
+
+/* ---------- render ---------- */
+function sec(key,cap,body){return S.show[key]?'<section><p class="cap">'+cap+'</p>'+body+'</section>':''}
+function render(){
+ dalangBtn();
+ const d=month(Y,M),[py,pmn]=pm(Y,M),pd=month(py,pmn),sh=S.show,goal=S.goal;
+ $('who').textContent=S.name?('Habana · '+S.name):'Habana';
+ $('mlabel').textContent=MN[M]+' '+Y;
+ const pct=goal>0?d.total/goal:0,done=d.total>=goal;
+ let h='<section><p class="cap">Zarobené</p><div class="big">'+gbp(d.total)+'</div>';
+ if(sh.eur)h+='<div class="eur">≈ '+eur(d.total*S.rate)+'<span style="font-size:12px;color:var(--tx3)"> &nbsp;kurz '+S.rate.toLocaleString('sk-SK',{maximumFractionDigits:4})+'</span></div>';
+ if(sh.goal){
+  h+='<div class="prog"><i class="'+(done?'done':'')+'" style="width:'+Math.min(100,pct*100)+'%"></i></div><div class="pl"><span><b>'+nf(pct*100,0)+' %</b> cieľa</span><span>cieľ '+gbp(goal,0)+'</span></div>';
+  if(done)h+='<div class="note"><b class="up">Cieľ splnený</b> · nad cieľom <b>'+gbp(d.total-goal)+'</b></div>';
+  else if(sh.pace){
+   const left=goal-d.total;
+   if(d.cur){const dl=d.n-d.el+1;h+='<div class="note">Zostáva <b>'+gbp(left)+'</b> · do konca mesiaca '+dl+' '+(dl===1?'deň':dl<5?'dni':'dní')+' · treba <b>'+gbp(left/dl)+'</b> denne</div>'}
+   else if(d.past)h+='<div class="note">Cieľ chýbal o <b class="dn">'+gbp(left)+'</b></div>';
+   else h+='<div class="note">Zostáva <b>'+gbp(left)+'</b></div>';
+  }
+ }
+ h+='</section>';
+ if(sh.forecast&&d.cur){
+  const ac=d.el?d.total/d.el:0,pr=d.total+ac*(d.n-d.el),ok=pr>=goal;
+  h+='<section><p class="cap">Odhad na koniec mesiaca</p><div class="g2"><div><div class="k">Pri doterajšom tempe</div><div class="v">'+gbp(pr,0)+'</div><div class="k">≈ '+eur(pr*S.rate).replace(/,\d\d/,'')+'</div></div><div><div class="k">Voči cieľu</div><div class="v '+(ok?'up':'dn')+'">'+(ok?'+':'−')+gbp(Math.abs(pr-goal),0).replace('£ ','£ ')+'</div><div class="k">'+(ok?'cieľ by si splnil':'cieľ by sa nesplnil')+'</div></div></div></section>';
+ }
+ if(sh.compare){
+  const ref=d.cur?upTo(pd,Math.min(d.el,pd.n)):pd.total,diff=d.total-ref,pc=ref>0?diff/ref*100:null,lab=d.cur?'rovnaké obdobie minulého mesiaca':'minulý mesiac';
+  let b='<div class="g2"><div><div class="k">Rozdiel</div><div class="v '+(diff>=0?'up':'dn')+'">'+(diff>=0?'▲ ':'▼ ')+gbp(Math.abs(diff),0)+'</div><div class="k">'+(pc===null?'bez porovnania':(pc>=0?'+':'−')+nf(Math.abs(pc),0)+' %')+'</div></div><div><div class="k">'+MN[pmn]+'</div><div class="v">'+gbp(ref,0)+'</div><div class="k">'+lab+'</div></div>';
+  if(d.cur)b+='<div><div class="k">Celý minulý mesiac</div><div class="v">'+gbp(pd.total,0)+'</div></div><div><div class="k">Priemer / deň minule</div><div class="v">'+(pd.worked?gbp(pd.total/pd.worked,0):'–')+'</div></div>';
+  h+='<section><p class="cap">Oproti minulému mesiacu</p>'+b+'</div></section>';
+ }
+ if(sh.avg||sh.best){
+  let b='<div class="g2">';
+  if(sh.avg){const aw=d.worked?d.total/d.worked:0,ac=d.el?d.total/d.el:0;
+   b+='<div><div class="k">Priemer / odpracovaný deň</div><div class="v">'+(d.worked?gbp(aw):'–')+'</div></div><div><div class="k">Priemer / kalendárny deň</div><div class="v">'+(d.el?gbp(ac):'–')+'</div></div><div><div class="k">Odpracované dni</div><div class="v">'+d.worked+' <small>z '+(d.cur?d.el:d.n)+'</small></div></div>';
+   if(!sh.best)b+='<div></div>'}
+  if(sh.best){let bi=0;d.days.forEach((v,i)=>{if(i&&v>d.days[bi])bi=i});const avgE=d.es.length?d.total/d.es.length:0;
+   if(!sh.avg)b+='<div><div class="k">Odpracované dni</div><div class="v">'+d.worked+'</div></div>';
+   b+='<div><div class="k">Najlepší deň</div><div class="v">'+(bi?gbp(d.days[bi]):'–')+(bi?' <small>'+bi+'. '+(M+1)+'.</small>':'')+'</div></div><div><div class="k">Záznamov</div><div class="v">'+d.es.length+'</div></div><div><div class="k">Priemer na záznam</div><div class="v">'+(d.es.length?gbp(avgE):'–')+'</div></div>'}
+  h+='<section><p class="cap">Štatistiky</p>'+b+'</div></section>';
+ }
+ h+=sec('cChart','Priebeh mesiaca',cChart(d));
+ h+=sec('dChart','Denné zárobky',dChart(d));
+ h+=sec('mChart','Posledných 6 mesiacov',mChart(d));
+ h+=sec('wChart','Podľa dňa v týždni',wChart(d));
+ const on=S.agencies.filter(a=>a.on);
+ h+=sec('agencies','Podľa agentúry',on.length?on.map(a=>{const v=d.es.filter(e=>e.agency===a.id).reduce((s,e)=>s+e.amount,0),p=d.total?v/d.total*100:0;
+  return '<div class="ag"><div class="r"><span><span class="dot" style="background:'+COL[S.agencies.indexOf(a)%COL.length]+'"></span>'+esc(a.name)+'</span><span><b>'+gbp(v)+'</b>'+(sh.eur?' · '+eur(v*S.rate):'')+'</span></div><div class="bar"><i style="width:'+p+'%;background:'+COL[S.agencies.indexOf(a)%COL.length]+'"></i></div></div>'}).join(''):'<div class="empty">Žiadna zapnutá agentúra. Zapni ich v nastaveniach.</div>');
+ const es=d.es.slice().sort((a,b)=>b.date.localeCompare(a.date)||String(b.id).localeCompare(String(a.id)));let l='',last='';
+ for(const e of es){if(e.date!==last){last=e.date;const x=new Date(e.date+'T12:00:00');l+='<div class="day">'+DN[x.getDay()]+' '+x.getDate()+'. '+(x.getMonth()+1)+'.</div>'}
+  l+='<div class="row" data-id="'+e.id+'"><div><div>'+esc(agName(e.agency))+'</div>'+(e.note?'<div class="a">'+esc(e.note)+'</div>':'')+'</div><div class="m">'+gbp(e.amount)+'</div></div>'}
+ h+=sec('list','Záznamy',l||'<div class="empty">V tomto mesiaci zatiaľ nič. Ťukni na „Pridať sumu“.</div>');
+ $('main').innerHTML=h;
+ document.querySelectorAll('.row').forEach(r=>r.onclick=()=>openAdd(r.dataset.id));
+}
+
+/* ---------- add / edit ---------- */
+let editId=null,selAg=null;
+function chips(){
+ const list=S.agencies.filter(a=>a.on||a.id===selAg);
+ $('agchips').innerHTML=list.length?list.map(a=>'<button class="chip'+(a.id===selAg?' on':'')+'" data-a="'+a.id+'">'+esc(a.name)+'</button>').join(''):'<span class="hint">Najprv zapni agentúru v nastaveniach.</span>';
+ document.querySelectorAll('#agchips .chip').forEach(c=>c.onclick=()=>{selAg=c.dataset.a;chips()});
+}
+function openAdd(id){
+ editId=id||null;const e=id?S.entries.find(x=>String(x.id)===String(id)):null;
+ if(e&&e.auto){alert('Tento záznam je stiahnutý z portálu a pri ďalšej aktualizácii sa prepíše. Ručne ho upraviť nemôžeš.');return}
+ $('t1').textContent=e?'Upraviť záznam':'Nová suma';
+ $('amount').value=e?String(e.amount).replace('.',','):'';
+ $('date').value=e?e.date:ymd(new Date());$('note').value=e?(e.note||''):'';
+ selAg=e?e.agency:((S.lastAg&&agOn(S.lastAg))?S.lastAg:(S.agencies.find(a=>a.on)||{}).id);
+ $('del').style.display=e?'block':'none';$('err1').textContent='';chips();$('sh1').classList.add('on');
+ if(!e)setTimeout(()=>$('amount').focus(),150);
+}
+$('add').onclick=()=>openAdd();
+$('c1').onclick=()=>$('sh1').classList.remove('on');
+$('today').onclick=()=>{$('date').value=ymd(new Date())};
+$('yday').onclick=()=>{const d=new Date();d.setDate(d.getDate()-1);$('date').value=ymd(d)};
+$('s1').onclick=()=>{
+ const a=num($('amount').value);
+ if(!(a>0)){$('err1').textContent='Zadaj sumu väčšiu ako 0.';return}
+ if(!selAg){$('err1').textContent='Vyber agentúru.';return}
+ if(!$('date').value){$('err1').textContent='Vyber dátum.';return}
+ const o={date:$('date').value,agency:selAg,amount:r2(a),note:$('note').value.trim()};
+ if(editId){Object.assign(S.entries.find(x=>String(x.id)===String(editId)),o)}else{o.id=Date.now();S.entries.push(o)}
+ S.lastAg=selAg;save();
+ const d=new Date(o.date+'T12:00:00');Y=d.getFullYear();M=d.getMonth();
+ $('sh1').classList.remove('on');render();
+};
+$('del').onclick=()=>{if(confirm('Zmazať tento záznam?')){S.entries=S.entries.filter(x=>String(x.id)!==String(editId));save();$('sh1').classList.remove('on');render()}};
+$('prev').onclick=()=>{M--;if(M<0){M=11;Y--}render()};
+$('next').onclick=()=>{M++;if(M>11){M=0;Y++}render()};
+
+/* ---------- settings ---------- */
+function agset(){
+ $('agset').innerHTML=S.agencies.map(a=>'<div class="sw"><span>'+esc(a.name)+'</span><button class="tg'+(a.on?' on':'')+'" data-a="'+a.id+'" aria-label="'+esc(a.name)+'"></button></div>').join('');
+ document.querySelectorAll('#agset .tg').forEach(t=>t.onclick=()=>{const a=S.agencies.find(x=>x.id===t.dataset.a);a.on=!a.on;save();agset();render()});
+}
+function viewset(){
+ $('viewset').innerHTML=VIEW.map(g=>'<div class="sub">'+g[0]+'</div>'+g[1].map(x=>'<div class="sw"><span>'+x[1]+'<small>'+x[2]+'</small></span><button class="tg'+(S.show[x[0]]?' on':'')+'" data-k="'+x[0]+'" aria-label="'+x[1]+'"></button></div>').join('')).join('');
+ document.querySelectorAll('#viewset .tg').forEach(t=>t.onclick=()=>{S.show[t.dataset.k]=!S.show[t.dataset.k];save();viewset();render()});
+}
+$('gear').onclick=()=>{infoTexts();$('name').value=S.name||'';$('rateIn').value=String(S.rate).replace('.',',');$('goalIn').value=String(S.goal).replace('.',',');$('err2').textContent='';$('bk').style.display='none';agset();viewset();$('sh2').classList.add('on')};
+$('addag').onclick=()=>{const n=$('newag').value.trim();if(!n)return;S.agencies.push({id:'a'+Date.now(),name:n,on:true});$('newag').value='';save();agset();render()};
+function applyText(){
+ const r=num($('rateIn').value),g=num($('goalIn').value);
+ if(!(g>0)){$('err2').textContent='Cieľ musí byť číslo väčšie ako 0.';return false}
+ if(!(r>0)){$('err2').textContent='Kurz musí byť číslo väčšie ako 0.';return false}
+ S.rate=r;S.goal=g;S.goalSet=true;S.name=$('name').value.trim();save();$('err2').textContent='';render();return true;
+}
+['name','rateIn','goalIn'].forEach(i=>$(i).addEventListener('change',applyText));
+$('c2').onclick=()=>{if(applyText())$('sh2').classList.remove('on')};
+$('exp').onclick=()=>{const t=JSON.stringify(S);if(window.Android)Android.share(t);else{$('bk').style.display='block';$('bk').value=t}};
+$('imp').onclick=()=>{
+ const b=$('bk');
+ if(b.style.display==='none'){b.style.display='block';b.value='';b.focus();$('err2').textContent='Vlož text zálohy a ťukni znova na „Obnoviť zo zálohy“.';return}
+ try{const d=JSON.parse(b.value);if(!d.agencies||!d.entries)throw 0;if(!confirm('Prepísať všetky údaje v tejto appke zálohou?'))return;S=d;migrate2();save();b.style.display='none';$('sh2').classList.remove('on');render()}catch(e){$('err2').textContent='Záloha sa nedá prečítať.'}
+};
+function migrate2(){S.goal=S.goal>0?S.goal:1000;S.rate=S.rate>0?S.rate:1.15;S.show=Object.assign({},DEF_SHOW,S.show||{});DEF_AG.forEach(d=>{if(!S.agencies.find(x=>x.id===d.id))S.agencies.push({...d})})}
+
+/* ---------- Portal import (Dalang, Magna) ---------- */
+const HAS=()=>!!window.Android&&typeof Android.importPortal==='function';
+const AUTO={dalang:{label:'Dals',unit:['hovor','hovory','hovorov']},magna:{label:'Magna',unit:['job','joby','jobov']}};
+const autoOn=()=>Object.keys(AUTO).filter(k=>agOn(k));
+function dalangBtn(){$('dal').style.display=(HAS()&&autoOn().length)?'inline-flex':'none'}
+let queue=[];
+function nextImport(){const a=queue.shift();if(a)Android.importPortal(a,Y,M+1)}
+function startImport(list){
+ if(!HAS()){alert('Sťahovanie funguje len v Android appke.');return}
+ queue=list.filter(a=>agOn(a));
+ if(!queue.length){alert('Najprv zapni agentúru v nastaveniach.');return}
+ nextImport();
+}
+function openImport(){
+ const on=autoOn();
+ if(!HAS()){alert('Sťahovanie funguje len v Android appke.');return}
+ if(!on.length){alert('Najprv zapni agentúru Dals alebo Magna v nastaveniach.');return}
+ if(on.length===1){startImport(on);return}
+ $('impbtns').innerHTML=on.map(k=>'<div class="sw"><span>'+esc(AUTO[k].label)+'</span><button class="btn" data-k="'+k+'" style="flex:none;padding:8px 16px">Aktualizovať</button></div>').join('')+'<div class="sw"><span>Všetky zapnuté</span><button class="btn p" data-k="*" style="flex:none;padding:8px 16px">Aktualizovať</button></div>';
+ document.querySelectorAll('#impbtns button').forEach(b=>b.onclick=()=>{$('sh3').classList.remove('on');startImport(b.dataset.k==='*'?on:[b.dataset.k])});
+ $('sh3').classList.add('on');
+}
+$('dal').onclick=openImport;
+$('dal2').onclick=()=>{$('sh2').classList.remove('on');openImport()};
+$('c3').onclick=()=>$('sh3').classList.remove('on');
+window.onImport=function(portal,str){
+ const cfg=AUTO[portal]||{label:portal,unit:['záznam','záznamy','záznamov']};
+ let d;try{d=JSON.parse(str)}catch(e){alert(cfg.label+': údaje sa nedajú prečítať.');queue=[];return}
+ const byDay={};
+ (d.sessions||[]).forEach(s=>{const p=s.date.split('/');const iso=p[2]+'-'+p[1]+'-'+p[0];const o=(byDay[iso]=byDay[iso]||{sum:0,n:0,c:0});o.sum+=s.pay;o.n++;if(s.cancelled)o.c++});
+ const pre=d.y+'-'+pad(d.m)+'-';
+ S.entries=S.entries.filter(e=>!(e.auto&&e.agency===portal&&e.date.startsWith(pre)));
+ let sum=0,n=0;
+ Object.keys(byDay).sort().forEach(iso=>{const v=byDay[iso];sum+=v.sum;n+=v.n;
+  const u=v.n===1?cfg.unit[0]:v.n<5?cfg.unit[1]:cfg.unit[2];
+  S.entries.push({id:'auto-'+portal+'-'+iso,date:iso,agency:portal,amount:Math.round(v.sum*1000)/1000,note:cfg.label+' · '+v.n+' '+u+(v.c?' (z toho '+v.c+' zrušený)':''),auto:true})});
+ S['last_'+portal]=new Date().toISOString();save();
+ Y=d.y;M=d.m-1;render();
+ const man=S.entries.filter(e=>!e.auto&&e.agency===portal&&e.date.startsWith(pre)).length;
+ let msg=cfg.label+': stiahnutých '+n+' '+cfg.unit[2]+', spolu '+gbp(sum)+(d.total!=null?' (podľa portálu '+gbp(d.total)+')':'')+'.';
+ if(d.total!=null&&Math.abs(sum-d.total)>0.05)msg+='\nPozor: súčet sa líši od portálu. Skontroluj to.';
+ if(d.missing)msg+='\nPozor: '+d.missing+' záznamov sa nepodarilo prečítať.';
+ if(portal==='dalang'&&d.count!=null&&d.count!==n)msg+='\nPozor: portál udáva '+d.count+' hovorov.';
+ if(man)msg+='\nV mesiaci máš aj '+man+' ručných záznamov agentúry '+cfg.label+'. Ak ich portál už pokrýva, zmaž ich, inak sa započítajú dvakrát.';
+ alert(msg);
+ nextImport();
+};
+window.onImportError=function(portal,m){queue=[];alert((AUTO[portal]?AUTO[portal].label:portal)+': '+m)};
+window.onDalang=str=>window.onImport('dalang',str);
+window.onDalangError=m=>window.onImportError('dalang',m);
+
+/* ---------- App updates ---------- */
+function infoTexts(){
+ const last=Object.keys(AUTO).filter(k=>S['last_'+k]||(k==='dalang'&&S.lastDalang)).map(k=>AUTO[k].label+': '+new Date(S['last_'+k]||S.lastDalang).toLocaleString('sk-SK')).join(' · ');
+ $('dalinfo').textContent=HAS()?('Stiahne sa mesiac, ktorý máš otvorený.'+(last?' Naposledy: '+last+'.':'')):'Sťahovanie funguje len v Android appke.';
+ $('verinfo').textContent=(window.Android&&Android.versionInfo)?Android.versionInfo():'Verzia nie je dostupná.';
+}
+$('updchk').onclick=()=>{if(window.Android&&Android.checkUpdate){$('verinfo').textContent='Kontrolujem…';Android.checkUpdate(true)}else alert('Aktualizácie fungujú len v Android appke.')};
+window.onUpdate=function(status,ver,manual){
+ const b=$('upd');
+ if(status==='updated'){b.style.display='flex';b.innerHTML='<span>Je pripravená nová verzia (v'+ver+').</span><button id="updgo">Použiť</button>';$('updgo').onclick=()=>location.reload()}
+ else if(status==='needs-apk'){b.style.display='flex';b.innerHTML='<span>Vyšla nová verzia appky. Treba nainštalovať novú APK.</span>'}
+ else if(manual){alert(status==='current'?'Máš najnovšiu verziu.':status==='offline'?'Nepodarilo sa spojiť so serverom. Skontroluj internet.':'Aktualizácia zlyhala: '+status)}
+ if(manual)infoTexts();
+};
+window.onBack=()=>{if($('sh1').classList.contains('on')){$('sh1').classList.remove('on');return true}if($('sh2').classList.contains('on')){$('sh2').classList.remove('on');return true}return false};
+render();
+try{if(window.Android&&Android.appOk)Android.appOk()}catch(e){}
+</script></body></html>
