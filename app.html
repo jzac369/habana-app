@@ -109,6 +109,10 @@ input.amt{font-size:28px;font-weight:300}
  <div id="notifset" style="margin-top:6px"></div>
  <div class="btns" style="margin-top:8px"><button class="btn" id="ntest">Otestovať upozornenie</button></div>
 
+ <div class="grp">Upozornenia zo servera (push)</div>
+ <label>Kód upozornení</label><input id="pushIn" autocomplete="off" placeholder="napr. hb-jarko-1a2b3c4d5e6f7a8b">
+ <div class="hint" id="pushinfo"></div>
+
  <div class="grp">Pracovné dni</div>
  <div class="chips" id="wdset"></div>
  <div class="hint">Počítajú sa do zostávajúcich dní, odhadu a denného cieľa. Ak pracuješ aj cez víkend, zárobok sa započíta normálne.</div>
@@ -152,14 +156,14 @@ const VIEW=[
  ['Ciele a tempo',[['goal','Cieľ mesiaca','Ukazovateľ, ako ďaleko si od cieľa'],['daily','Denný cieľ','Dnešný zárobok voči dennému cieľu'],['pace','Potrebný denný zárobok','Koľko treba denne do konca mesiaca'],['forecast','Odhad na koniec mesiaca','Podľa doterajšieho tempa'],['eur','Prepočet na eurá','Suma v € pod hlavnou sumou']]],
  ['Štatistiky',[['minutes','Odtlmočené minúty','Čas hovorov podľa agentúry a zárobok na hodinu'],['fees','Zrušené joby a poplatky','Poplatky za zrušené joby a čistý zárobok'],['langs','Jazyky','Počet jobov v slovenčine a češtine'],['avg','Priemery','Na odpracovaný deň a na pracovný deň'],['best','Najlepší deň a záznamy','Rekord mesiaca, počet a priemer záznamu'],['compare','Porovnanie s minulým mesiacom','Rovnaké obdobie aj celý mesiac']]],
  ['Grafy',[['cChart','Priebeh mesiaca','Kumulatívna čiara, cieľ a minulý mesiac'],['dChart','Denné zárobky','Tenké stĺpce po dňoch'],['mChart','Posledných 6 mesiacov','Porovnanie mesiacov'],['wChart','Podľa dňa v týždni','Ktoré dni sú najvýnosnejšie']]],
- ['Zoznamy',[['agencies','Rozpis podľa agentúry','Súčty a podiel agentúr'],['list','Záznamy','Zoznam po dňoch']]]
+ ['Zoznamy',[['upcoming','Potvrdené joby','Nadchádzajúce akceptované joby zo servera'],['agencies','Rozpis podľa agentúry','Súčty a podiel agentúr'],['list','Záznamy','Zoznam po dňoch']]]
 ];
 const DEF_SHOW={};VIEW.forEach(g=>g[1].forEach(x=>{DEF_SHOW[x[0]]=true}));
 const DEF_AG=[{id:'magna',name:'Magna',on:true},{id:'dalang',name:'Dals',on:true},{id:'bigword',name:'BigWord',on:false},{id:'other',name:'Iné príjmy',on:true}];
 let S=null;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
 if(!S||!S.agencies||!S.entries)S={name:'',rate:1.15,agencies:[],entries:[]};
 (function migrate(){
- S.goal=S.goal>0?S.goal:1000;if(!S.goalSet&&S.goal===100)S.goal=1000;if(!Array.isArray(S.workdays)||!S.workdays.length)S.workdays=[1,2,3,4,5];S.rate=S.rate>0?S.rate:1.15;S.show=Object.assign({},DEF_SHOW,S.show||{});if(!S.notif||typeof S.notif!=='object')S.notif={};S.notif=Object.assign({day:true,month:true,asked:false,lastDay:'',lastMonth:''},S.notif);
+ S.goal=S.goal>0?S.goal:1000;if(!S.goalSet&&S.goal===100)S.goal=1000;if(!Array.isArray(S.workdays)||!S.workdays.length)S.workdays=[1,2,3,4,5];S.rate=S.rate>0?S.rate:1.15;S.show=Object.assign({},DEF_SHOW,S.show||{});if(!S.notif||typeof S.notif!=='object')S.notif={};S.notif=Object.assign({day:true,month:true,asked:false,lastDay:'',lastMonth:''},S.notif);if(!S.jobs||typeof S.jobs!=='object')S.jobs={};if(!S.upcoming||typeof S.upcoming!=='object')S.upcoming={};if(!S.full||typeof S.full!=='object')S.full={};S.pushTopic=S.pushTopic||'';
  DEF_AG.forEach(d=>{const a=S.agencies.find(x=>x.id===d.id);if(!a)S.agencies.push({...d});else if(d.id==='dalang'&&/^Dalang/.test(a.name))a.name='Dals'});
 })();
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
@@ -389,6 +393,7 @@ function render(){
  h+=sec('mChart','Posledných 6 mesiacov',mChart(d));
  h+=sec('wChart','Podľa dňa v týždni',wChart(d));
  const on=S.agencies.filter(a=>a.on);
+ if(S.show.upcoming&&(S.pushTopic||Object.keys(S.upcoming).length))h+=sec('upcoming','Potvrdené joby',upcomingSection());
  h+=sec('agencies','Podľa agentúry',on.length?on.map(a=>{const v=d.es.filter(e=>e.agency===a.id).reduce((s,e)=>s+e.amount,0),p=d.total?v/d.total*100:0;
   return '<div class="ag"><div class="r"><span><span class="dot" style="background:'+COL[S.agencies.indexOf(a)%COL.length]+'"></span>'+esc(a.name)+'</span><span><b>'+gbp(v)+'</b>'+(sh.eur?' · '+eur(v*S.rate):'')+'</span></div><div class="bar"><i style="width:'+p+'%;background:'+COL[S.agencies.indexOf(a)%COL.length]+'"></i></div></div>'}).join(''):'<div class="empty">Žiadna zapnutá agentúra. Zapni ich v nastaveniach.</div>');
  const es=d.es.slice().sort((a,b)=>b.date.localeCompare(a.date)||String(b.id).localeCompare(String(a.id)));let l='',last='';
@@ -467,7 +472,7 @@ function viewset(){
 }
 $('vall').onclick=()=>{VIEW.forEach(g=>g[1].forEach(x=>{S.show[x[0]]=true}));save();viewset();render()};
 $('vbase').onclick=()=>{const keep=['goal','daily','pace','eur','agencies','list'];VIEW.forEach(g=>g[1].forEach(x=>{S.show[x[0]]=keep.indexOf(x[0])>=0}));save();viewset();render()};
-$('gear').onclick=()=>{infoTexts();$('dayIn').value=S.dayGoal>0?String(S.dayGoal).replace('.',','):'';dayHint();notifset();$('name').value=S.name||'';$('rateIn').value=String(S.rate).replace('.',',');$('goalIn').value=String(S.goal).replace('.',',');$('err2').textContent='';$('bk').style.display='none';agset();viewset();wdset();$('sh2').classList.add('on')};
+$('gear').onclick=()=>{infoTexts();$('pushIn').value=S.pushTopic||'';pushInfo();$('dayIn').value=S.dayGoal>0?String(S.dayGoal).replace('.',','):'';dayHint();notifset();$('name').value=S.name||'';$('rateIn').value=String(S.rate).replace('.',',');$('goalIn').value=String(S.goal).replace('.',',');$('err2').textContent='';$('bk').style.display='none';agset();viewset();wdset();$('sh2').classList.add('on')};
 $('addag').onclick=()=>{const n=$('newag').value.trim();if(!n)return;S.agencies.push({id:'a'+Date.now(),name:n,on:true});$('newag').value='';save();agset();render()};
 function applyText(){
  const r=num($('rateIn').value),g=num($('goalIn').value);
@@ -483,7 +488,7 @@ $('imp').onclick=()=>{
  if(b.style.display==='none'){b.style.display='block';b.value='';b.focus();$('err2').textContent='Vlož text zálohy a ťukni znova na „Obnoviť zo zálohy“.';return}
  try{const d=JSON.parse(b.value);if(!d.agencies||!d.entries)throw 0;if(!confirm('Prepísať všetky údaje v tejto appke zálohou?'))return;S=d;migrate2();save();b.style.display='none';$('sh2').classList.remove('on');render()}catch(e){$('err2').textContent='Záloha sa nedá prečítať.'}
 };
-function migrate2(){S.goal=S.goal>0?S.goal:1000;if(!Array.isArray(S.workdays)||!S.workdays.length)S.workdays=[1,2,3,4,5];S.rate=S.rate>0?S.rate:1.15;S.show=Object.assign({},DEF_SHOW,S.show||{});if(!S.notif||typeof S.notif!=='object')S.notif={};S.notif=Object.assign({day:true,month:true,asked:false,lastDay:'',lastMonth:''},S.notif);DEF_AG.forEach(d=>{if(!S.agencies.find(x=>x.id===d.id))S.agencies.push({...d})})}
+function migrate2(){S.goal=S.goal>0?S.goal:1000;if(!Array.isArray(S.workdays)||!S.workdays.length)S.workdays=[1,2,3,4,5];S.rate=S.rate>0?S.rate:1.15;S.show=Object.assign({},DEF_SHOW,S.show||{});if(!S.notif||typeof S.notif!=='object')S.notif={};S.notif=Object.assign({day:true,month:true,asked:false,lastDay:'',lastMonth:''},S.notif);if(!S.jobs||typeof S.jobs!=='object')S.jobs={};if(!S.upcoming||typeof S.upcoming!=='object')S.upcoming={};if(!S.full||typeof S.full!=='object')S.full={};S.pushTopic=S.pushTopic||'';DEF_AG.forEach(d=>{if(!S.agencies.find(x=>x.id===d.id))S.agencies.push({...d})})}
 
 /* ---------- Portal import (Dalang, Magna) ---------- */
 const HAS=()=>!!window.Android&&typeof Android.importPortal==='function';
@@ -512,20 +517,34 @@ $('dal2').onclick=()=>{$('sh2').classList.remove('on');openImport()};
 $('c3').onclick=()=>$('sh3').classList.remove('on');
 const normLang=s=>/slovak|slovenč/i.test(s||'')?'sk':/czech|česk|cesk/i.test(s||'')?'cz':'ot';
 const durMin=s=>{const m=String(s||'').match(/^(\d+):(\d{2}):(\d{2})$/);return m?(+m[1])*60+(+m[2])+(+m[3])/60:0};
+function rebuildAuto(portal,pre){
+ const cfg=AUTO[portal]||{label:portal,unit:['záznam','záznamy','záznamov']};
+ S.entries=S.entries.filter(e=>!(e.auto&&e.agency===portal&&e.date.startsWith(pre)));
+ const byDay={},jb=S.jobs[portal]||{};
+ Object.keys(jb).forEach(r=>{const s=jb[r];if(!s.date.startsWith(pre))return;
+  const o=(byDay[s.date]=byDay[s.date]||{sum:0,n:0,c:0,min:0,fee:0,na:0,l:{}});o.sum+=s.pay;o.n++;
+  if(s.cancelled){o.c++;o.fee+=s.pay}
+  else{const mn=s.min||0;o.min+=mn;const lg=normLang(s.lang);const q=(o.l[lg]=o.l[lg]||{n:0,min:0});q.n++;q.min+=mn;if(s.noAct)o.na++}});
+ Object.keys(byDay).sort().forEach(iso=>{const v=byDay[iso];
+  const u=v.n===1?cfg.unit[0]:v.n<5?cfg.unit[1]:cfg.unit[2];
+  S.entries.push({id:'auto-'+portal+'-'+iso,date:iso,agency:portal,amount:Math.round(v.sum*1000)/1000,min:Math.round(v.min*100)/100,cx:v.c,fee:Math.round(v.fee*1000)/1000,noAct:v.na,
+   lang:Object.keys(v.l).reduce((a,k)=>{a[k]={n:v.l[k].n,min:Math.round(v.l[k].min*100)/100};return a},{}),
+   note:cfg.label+' · '+v.n+' '+u+(v.c?' (z toho '+v.c+' zrušený)':''),auto:true})});
+}
+const sessRef=s=>s.ref||('d:'+s.date+'|'+(s.time||'')+'|'+(s.dur||''));
+const isoOf=ds=>{const q=String(ds||'').split('/');return q.length===3?q[2]+'-'+q[1]+'-'+q[0]:''};
+const jobOf=(s,iso)=>({date:iso,pay:+s.pay||0,min:(s.min!=null?+s.min:durMin(s.dur)),lang:s.lang||'',cancelled:!!s.cancelled,noAct:!!s.noAct});
 window.onImport=function(portal,str){
  const cfg=AUTO[portal]||{label:portal,unit:['záznam','záznamy','záznamov']};
  let d;try{d=JSON.parse(str)}catch(e){alert(cfg.label+': údaje sa nedajú prečítať.');queue=[];return}
  const b0=snap();
- const byDay={};
- (d.sessions||[]).forEach(s=>{const p=s.date.split('/');const iso=p[2]+'-'+p[1]+'-'+p[0];const o=(byDay[iso]=byDay[iso]||{sum:0,n:0,c:0,min:0,fee:0,na:0,l:{}});o.sum+=s.pay;o.n++;
-  if(s.cancelled){o.c++;o.fee+=s.pay}
-  else{const mn=(s.min!=null?s.min:durMin(s.dur));o.min+=mn;const lg=normLang(s.lang);const q=(o.l[lg]=o.l[lg]||{n:0,min:0});q.n++;q.min+=mn;if(s.noAct)o.na++}});
  const pre=d.y+'-'+pad(d.m)+'-';
- S.entries=S.entries.filter(e=>!(e.auto&&e.agency===portal&&e.date.startsWith(pre)));
- let sum=0,n=0;
- Object.keys(byDay).sort().forEach(iso=>{const v=byDay[iso];sum+=v.sum;n+=v.n;
-  const u=v.n===1?cfg.unit[0]:v.n<5?cfg.unit[1]:cfg.unit[2];
-  S.entries.push({id:'auto-'+portal+'-'+iso,date:iso,agency:portal,amount:Math.round(v.sum*1000)/1000,min:Math.round(v.min*100)/100,cx:v.c,fee:Math.round(v.fee*1000)/1000,noAct:v.na,lang:Object.keys(v.l).reduce((a,k)=>{a[k]={n:v.l[k].n,min:Math.round(v.l[k].min*100)/100};return a},{}),note:cfg.label+' · '+v.n+' '+u+(v.c?' (z toho '+v.c+' zrušený)':''),auto:true})});
+ const jb=(S.jobs[portal]=S.jobs[portal]||{});
+ Object.keys(jb).forEach(r=>{if(jb[r].date.startsWith(pre))delete jb[r]});
+ const seen={};let sum=0,n=0;
+ (d.sessions||[]).forEach(s=>{const iso=isoOf(s.date);if(!iso)return;let ref=sessRef(s);if(seen[ref]){ref+='#'+(seen[ref]++)}else seen[ref]=1;jb[ref]=jobOf(s,iso);sum+=s.pay;n++});
+ S.full[portal+'|'+pre]=1;
+ rebuildAuto(portal,pre);
  S['last_'+portal]=new Date().toISOString();save();notifyCheck(b0);
  Y=d.y;M=d.m-1;render();
  const man=S.entries.filter(e=>!e.auto&&e.agency===portal&&e.date.startsWith(pre)).length;
@@ -540,6 +559,51 @@ window.onImport=function(portal,str){
 window.onImportError=function(portal,m){queue=[];alert((AUTO[portal]?AUTO[portal].label:portal)+': '+m)};
 window.onDalang=str=>window.onImport('dalang',str);
 window.onDalangError=m=>window.onImportError('dalang',m);
+
+
+/* ---------- Push (server -> phone) ---------- */
+function mergeIncome(p){
+ const portal=p.portal;if(!AUTO[portal])return;
+ const b0=snap(),jb=(S.jobs[portal]=S.jobs[portal]||{}),months={};
+ (p.sessions||[]).forEach(s=>{const iso=isoOf(s.date);if(!iso)return;jb[sessRef(s)]=jobOf(s,iso);months[iso.slice(0,7)+'-']=1});
+ Object.keys(months).forEach(pre=>{if(S.full[portal+'|'+pre])rebuildAuto(portal,pre)});
+ save();notifyCheck(b0);
+}
+function handlePush(m){
+ let p={};try{p=JSON.parse(m.payload||'{}')}catch(e){return}
+ if(m.type==='job_confirmed'&&p.ref){S.upcoming[p.ref]={date:p.date||'',time:p.time||'',dur:p.dur||'',lang:p.lang||'',at:m.at||0}}
+ else if(m.type==='job_cancelled'&&p.ref){delete S.upcoming[p.ref]}
+ else if(m.type==='income'){mergeIncome(p)}
+ const y=ymd(new Date(Date.now()-864e5));Object.keys(S.upcoming).forEach(r=>{if((S.upcoming[r].date||'')<y)delete S.upcoming[r]});
+}
+window.onPushNow=function(){
+ if(!(window.Android&&typeof Android.takePushes==='function'))return;
+ let a=[];try{a=JSON.parse(Android.takePushes()||'[]')}catch(e){}
+ if(!a.length)return;
+ a.forEach(handlePush);save();render();
+};
+const langLabel=s=>/slovak/i.test(s||'')?'Slovenčina':/czech/i.test(s||'')?'Čeština':(s||'');
+function upcomingSection(){
+ const t=ymd(new Date());
+ const L=Object.keys(S.upcoming).map(r=>Object.assign({r:r},S.upcoming[r])).filter(x=>x.date>=t).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+ if(!L.length)return '<div class="empty">Zatiaľ žiadne potvrdené joby dopredu. Upozornenia chodia zo servera hneď po potvrdení jobu.</div>';
+ return L.map(x=>{const d=new Date(x.date+'T12:00:00');const dn=x.date===t?'Dnes':DN[d.getDay()]+' '+d.getDate()+'. '+(d.getMonth()+1)+'.';
+  return '<div class="row"><div><div>'+dn+(x.time?' · '+esc(x.time):'')+'</div><div class="a">'+esc(langLabel(x.lang))+(x.dur?' · '+esc(x.dur):'')+'</div></div></div>'}).join('');
+}
+function pushInfo(){
+ let t='';
+ if(window.Android&&Android.pushInfo){const a=(Android.pushInfo()||'|off').split('|');const st=a[1];
+  t=!S.pushTopic?'Zadaj kód, ktorý ti dal správca, a telefón bude dostávať upozornenia zo servera.':st==='ok'?'Prihlásený na odber upozornení.':st==='pending'?'Pripájam sa…':st==='error'?'Prihlásenie zlyhalo. Skontroluj internet a skús znova.':'Odber nie je aktívny.'}
+ else t='Upozornenia zo servera fungujú len v Android appke (potrebná je APK 1.9).';
+ $('pushinfo').textContent=t;
+}
+$('pushIn').addEventListener('change',()=>{
+ const v=$('pushIn').value.trim();
+ if(v&&!/^[A-Za-z0-9\-_.~%]{4,100}$/.test(v)){$('pushinfo').textContent='Kód môže obsahovať len písmená, čísla a znaky - _ . ~ %.';return}
+ S.pushTopic=v;save();
+ if(window.Android&&Android.pushTopic)Android.pushTopic(v);
+ setTimeout(pushInfo,1200);render();
+});
 
 /* ---------- App updates ---------- */
 function infoTexts(){
@@ -558,5 +622,6 @@ window.onUpdate=function(status,ver,manual){
 window.onBack=()=>{if($('sh1').classList.contains('on')){$('sh1').classList.remove('on');return true}if($('sh2').classList.contains('on')){$('sh2').classList.remove('on');return true}return false};
 render();
 try{if(window.Android&&Android.appOk)Android.appOk()}catch(e){}
+try{if(S.pushTopic&&window.Android&&Android.pushTopic)Android.pushTopic(S.pushTopic);window.onPushNow();document.addEventListener('visibilitychange',()=>{if(!document.hidden)window.onPushNow()})}catch(e){}
 try{if(window.Android&&Android.requestNotify&&!S.notif.asked){S.notif.asked=true;save();Android.requestNotify()}}catch(e){}
 </script></body></html>

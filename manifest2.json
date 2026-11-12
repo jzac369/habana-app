@@ -1,0 +1,10 @@
+{
+ "version": 14,
+ "minApk": 10,
+ "files": {
+  "app.html": "4e37af20183c1004e2279d1357e3fffbd04cc15efbae6f4b3ad9cae2a3af2a94",
+  "dalang.js": "9650c0fd442a26d4be9ad3cc44e5a9f7d1e89d1cb652b9be2508bded98330a85",
+  "magna.js": "1c9b853f9bdcbbe672b0a671131ee40c3f3c921900e21d56a18979c8e80dc67f"
+ },
+ "sig": "MEUCIEiOI3AOjlydoGQlvSQCVCiSJW/haHXhrlJxwlcqCyLgAiEAz48lE+YFiJep8W51XCJhe096nEgqvnjFM2Mfjz+mh/I="
+}
