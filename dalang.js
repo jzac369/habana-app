@@ -25,8 +25,9 @@
       const times=t.match(/\d{2}:\d{2}:\d{2}/g)||[];
       const pounds=[...t.matchAll(/£\s*([0-9]+(?:[.,][0-9]+)?)/g)];
       if(!d||!pounds.length)return null;
+      const lm=t.match(/\d{2}:\d{2}:\d{2}\s+([A-Za-z][A-Za-z ]*?)\s+\d{2}:\d{2}:\d{2}/)||t.match(/\b(Slovak|Czech)\b/);
       const dm=(times[1]||'').match(/^(\d+):(\d{2}):(\d{2})$/);
-      return {date:d[1].padStart(2,'0')+'/'+d[2].padStart(2,'0')+'/'+d[3],time:times[0]||'',dur:times[1]||'',min:dm?Math.round(((+dm[1])*60+(+dm[2])+(+dm[3])/60)*100)/100:0,pay:parseFloat(pounds[pounds.length-1][1].replace(',','.'))};
+      return {date:d[1].padStart(2,'0')+'/'+d[2].padStart(2,'0')+'/'+d[3],time:times[0]||'',dur:times[1]||'',lang:lm?lm[1].trim():'',min:dm?Math.round(((+dm[1])*60+(+dm[2])+(+dm[3])/60)*100)/100:0,pay:parseFloat(pounds[pounds.length-1][1].replace(',','.'))};
     }).filter(Boolean);
     const waitRows=async()=>{for(let i=0;i<40;i++){if(parseRows().length||/no (data|sessions)/i.test(document.body.innerText)&&cur())return;await sleep(300)}};
     const stable=async()=>{let last=-1,same=0;for(let i=0;i<20&&same<2;i++){const n=parseRows().length;same=(n===last&&n>0)?same+1:0;last=n;await sleep(500)}};
