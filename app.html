@@ -154,7 +154,7 @@ const DN=['Nedeľa','Pondelok','Utorok','Streda','Štvrtok','Piatok','Sobota'];
 const WD=['Po','Ut','St','Št','Pi','So','Ne'];
 const VIEW=[
  ['Ciele a tempo',[['goal','Cieľ mesiaca','Ukazovateľ, ako ďaleko si od cieľa'],['daily','Denný cieľ','Dnešný zárobok voči dennému cieľu'],['pace','Potrebný denný zárobok','Koľko treba denne do konca mesiaca'],['forecast','Odhad na koniec mesiaca','Podľa doterajšieho tempa'],['eur','Prepočet na eurá','Suma v € pod hlavnou sumou']]],
- ['Štatistiky',[['minutes','Odtlmočené minúty','Čas hovorov podľa agentúry a zárobok na hodinu'],['fees','Zrušené joby a poplatky','Poplatky za zrušené joby a čistý zárobok'],['langs','Jazyky','Počet jobov v slovenčine a češtine'],['avg','Priemery','Na odpracovaný deň a na pracovný deň'],['best','Najlepší deň a záznamy','Rekord mesiaca, počet a priemer záznamu'],['compare','Porovnanie s minulým mesiacom','Rovnaké obdobie aj celý mesiac']]],
+ ['Štatistiky',[['minutes','Odtlmočené minúty','Čas hovorov podľa agentúry a zárobok na hodinu'],['minToday','Minúty dnes','Odtlmočený čas dnes zvlášť pre Magnu a Dals'],['fees','Zrušené joby a poplatky','Poplatky za zrušené joby a čistý zárobok'],['langs','Jazyky','Počet jobov v slovenčine a češtine'],['avg','Priemery','Na odpracovaný deň a na pracovný deň'],['best','Najlepší deň a záznamy','Rekord mesiaca, počet a priemer záznamu'],['compare','Porovnanie s minulým mesiacom','Rovnaké obdobie aj celý mesiac']]],
  ['Grafy',[['cChart','Priebeh mesiaca','Kumulatívna čiara, cieľ a minulý mesiac'],['dChart','Denné zárobky','Tenké stĺpce po dňoch'],['mChart','Posledných 6 mesiacov','Porovnanie mesiacov'],['wChart','Podľa dňa v týždni','Ktoré dni sú najvýnosnejšie']]],
  ['Zoznamy',[['upcoming','Potvrdené joby','Nadchádzajúce akceptované joby zo servera'],['agencies','Rozpis podľa agentúry','Súčty a podiel agentúr'],['list','Záznamy','Zoznam po dňoch']]]
 ];
@@ -318,6 +318,17 @@ function minutesSection(d){
 }
 
 
+function minTodayHtml(){
+ const t=ymd(new Date());
+ const per=S.agencies.filter(a=>a.on).map(a=>({a:a,m:S.entries.filter(e=>e.date===t&&e.agency===a.id).reduce((s,e)=>s+(e.min||0),0)}))
+  .filter(x=>x.m>0||x.a.id==='magna'||x.a.id==='dalang');
+ if(!per.length)return '';
+ const tot=per.reduce((s,x)=>s+x.m,0);
+ let stale='';
+ const ld=S.last_dalang||S.lastDalang;
+ if(S.agencies.some(a=>a.id==='dalang'&&a.on)&&(!ld||ymd(new Date(ld))!==t))stale='<div style="color:var(--tx3);font-size:12px;margin-top:4px">Dals sa dopĺňa až po ťuknutí na ↻.</div>';
+ return '<div class="note"><span style="color:var(--tx2)">Dnes odtlmočené</span><div style="margin-top:4px">'+per.map(x=>esc(x.a.name)+' <b>'+fmtMin(x.m)+'</b>').join(' · ')+(per.length>1?' · spolu <b>'+fmtMin(tot)+'</b>':'')+'</div>'+stale+'</div>';
+}
 function feeSection(d){
  if(!(d.fees>0||d.cx>0))return '<div class="empty">V tomto mesiaci nemáš žiadne zrušené joby s poplatkom.</div>';
  const pc=d.total>0?d.fees/d.total*100:0;
@@ -349,6 +360,7 @@ function render(){
  let h='<section><p class="cap">Zarobené</p><div class="big">'+gbp(d.total)+'</div>';
  if(sh.eur)h+='<div class="eur">≈ '+eur(d.total*S.rate)+'<span style="font-size:12px;color:var(--tx3)"> &nbsp;kurz '+S.rate.toLocaleString('sk-SK',{maximumFractionDigits:4})+'</span></div>';
  if(sh.minutes&&d.mins>0)h+='<div class="eur" style="font-size:14px;margin-top:6px">Tlmočenie: '+fmtMin(d.mins)+'</div>';
+ if(sh.minToday&&d.cur)h+=minTodayHtml();
  const wl=d.cur?workdays(d,(d.days[d.el]>0?d.el+1:d.el),d.n):0;
  if(sh.goal){
   h+='<div class="prog"><i class="'+(done?'done':'')+'" style="width:'+Math.min(100,pct*100)+'%"></i></div><div class="pl"><span><b>'+nf(pct*100,0)+' %</b> cieľa</span><span>cieľ '+gbp(goal,0)+'</span></div>';
