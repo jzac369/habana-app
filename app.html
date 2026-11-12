@@ -103,6 +103,12 @@ input.amt{font-size:28px;font-weight:300}
  <div class="two"><div><label>Očakávané príjmy / cieľ (£)</label><input id="goalIn" inputmode="decimal" autocomplete="off"></div><div><label>1 £ = ? €</label><input id="rateIn" inputmode="decimal" autocomplete="off"></div></div>
  <div class="hint">Očakávané mesačné príjmy (cieľ) platia pre každý mesiac. Kurz ovplyvní prepočet na eurá.</div>
 
+ <div class="grp">Denný cieľ a upozornenia</div>
+ <label>Denný cieľ (£, prázdne = automaticky)</label><input id="dayIn" inputmode="decimal" placeholder="automaticky" autocomplete="off">
+ <div class="hint" id="dayhint"></div>
+ <div id="notifset" style="margin-top:6px"></div>
+ <div class="btns" style="margin-top:8px"><button class="btn" id="ntest">Otestovať upozornenie</button></div>
+
  <div class="grp">Pracovné dni</div>
  <div class="chips" id="wdset"></div>
  <div class="hint">Počítajú sa do zostávajúcich dní, odhadu a denného cieľa. Ak pracuješ aj cez víkend, zárobok sa započíta normálne.</div>
@@ -142,7 +148,7 @@ const MS=['Jan','Feb','Mar','Apr','Máj','Jún','Júl','Aug','Sep','Okt','Nov','
 const DN=['Nedeľa','Pondelok','Utorok','Streda','Štvrtok','Piatok','Sobota'];
 const WD=['Po','Ut','St','Št','Pi','So','Ne'];
 const VIEW=[
- ['Ciele a tempo',[['goal','Cieľ mesiaca','Ukazovateľ, ako ďaleko si od cieľa'],['pace','Potrebný denný zárobok','Koľko treba denne do konca mesiaca'],['forecast','Odhad na koniec mesiaca','Podľa doterajšieho tempa'],['eur','Prepočet na eurá','Suma v € pod hlavnou sumou']]],
+ ['Ciele a tempo',[['goal','Cieľ mesiaca','Ukazovateľ, ako ďaleko si od cieľa'],['daily','Denný cieľ','Dnešný zárobok voči dennému cieľu'],['pace','Potrebný denný zárobok','Koľko treba denne do konca mesiaca'],['forecast','Odhad na koniec mesiaca','Podľa doterajšieho tempa'],['eur','Prepočet na eurá','Suma v € pod hlavnou sumou']]],
  ['Štatistiky',[['minutes','Odtlmočené minúty','Čas hovorov podľa agentúry a zárobok na hodinu'],['avg','Priemery','Na odpracovaný deň a na pracovný deň'],['best','Najlepší deň a záznamy','Rekord mesiaca, počet a priemer záznamu'],['compare','Porovnanie s minulým mesiacom','Rovnaké obdobie aj celý mesiac']]],
  ['Grafy',[['cChart','Priebeh mesiaca','Kumulatívna čiara, cieľ a minulý mesiac'],['dChart','Denné zárobky','Tenké stĺpce po dňoch'],['mChart','Posledných 6 mesiacov','Porovnanie mesiacov'],['wChart','Podľa dňa v týždni','Ktoré dni sú najvýnosnejšie']]],
  ['Zoznamy',[['agencies','Rozpis podľa agentúry','Súčty a podiel agentúr'],['list','Záznamy','Zoznam po dňoch']]]
@@ -152,7 +158,7 @@ const DEF_AG=[{id:'magna',name:'Magna',on:true},{id:'dalang',name:'Dals',on:true
 let S=null;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
 if(!S||!S.agencies||!S.entries)S={name:'',rate:1.15,agencies:[],entries:[]};
 (function migrate(){
- S.goal=S.goal>0?S.goal:1000;if(!S.goalSet&&S.goal===100)S.goal=1000;if(!Array.isArray(S.workdays)||!S.workdays.length)S.workdays=[1,2,3,4,5];S.rate=S.rate>0?S.rate:1.15;S.show=Object.assign({},DEF_SHOW,S.show||{});
+ S.goal=S.goal>0?S.goal:1000;if(!S.goalSet&&S.goal===100)S.goal=1000;if(!Array.isArray(S.workdays)||!S.workdays.length)S.workdays=[1,2,3,4,5];S.rate=S.rate>0?S.rate:1.15;S.show=Object.assign({},DEF_SHOW,S.show||{});if(!S.notif||typeof S.notif!=='object')S.notif={};S.notif=Object.assign({day:true,month:true,asked:false,lastDay:'',lastMonth:''},S.notif);
  DEF_AG.forEach(d=>{const a=S.agencies.find(x=>x.id===d.id);if(!a)S.agencies.push({...d});else if(d.id==='dalang'&&/^Dalang/.test(a.name))a.name='Dals'});
 })();
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
@@ -172,6 +178,42 @@ const pad=n=>String(n).padStart(2,'0');
 const fmtMin=m=>{m=Math.round(m);const hh=Math.floor(m/60),r=m%60;return hh?hh+' h '+pad(r)+' min':r+' min'};
 const isWork=(y,m,d)=>S.workdays.indexOf(new Date(y,m,d).getDay())>=0;
 const workdays=(o,from,to)=>{let c=0;for(let i=Math.max(1,from);i<=to;i++)if(isWork(o.y,o.m,i))c++;return c};
+function dayGoal(){
+ if(S.dayGoal>0)return S.dayGoal;
+ const t=new Date(),n=dim(t.getFullYear(),t.getMonth()),wd=workdays({y:t.getFullYear(),m:t.getMonth()},1,n);
+ return S.goal/(wd||n);
+}
+function snap(){
+ const t=new Date(),iso=ymd(t),pre=iso.slice(0,7);let day=0,mon=0;
+ S.entries.forEach(e=>{if(!agOn(e.agency))return;if(e.date===iso)day+=e.amount;if(e.date.startsWith(pre))mon+=e.amount});
+ return {day:day,mon:mon,iso:iso,pre:pre};
+}
+const pick=a=>a[new Date().getDate()%a.length];
+function sendNotif(title,text,id){
+ if(!(window.Android&&typeof Android.notify==='function'))return false;
+ let ok=false;try{ok=Android.notify(title,text,id)}catch(e){}
+ if(!ok&&Android.requestNotify)try{Android.requestNotify()}catch(e){}
+ return ok;
+}
+function notifyCheck(b0){
+ const a=snap(),dg=dayGoal(),N=S.notif,nm=S.name?', '+S.name:'';
+ if(N.month&&b0.mon<S.goal&&a.mon>=S.goal&&N.lastMonth!==a.pre){
+  const mn=MN[+a.pre.slice(5,7)-1].toLowerCase();
+  const txt=pick([
+   'Gratulujem! Za '+mn+' si zarobil '+gbp(a.mon)+' a mesačný cieľ '+gbp(S.goal,0)+' je splnený. Fantastický výkon!',
+   'Mesačný cieľ '+gbp(S.goal,0)+' je pokorený! Za '+mn+' máš už '+gbp(a.mon)+'. Si skvelý, oslavuj!',
+   'Úžasné! Cieľ '+gbp(S.goal,0)+' za '+mn+' je splnený, zatiaľ '+gbp(a.mon)+'. Skvelá práca!']);
+  if(sendNotif('Mesačný cieľ splnený'+nm+'!',txt,1002)){N.lastMonth=a.pre;save()}
+ }
+ if(N.day&&b0.day<dg&&a.day>=dg&&N.lastDay!==a.iso){
+  const txt=pick([
+   'Dnes si zarobil už '+gbp(a.day)+', denný cieľ '+gbp(dg)+' je splnený. Gratulujem, takto sa to robí!',
+   'Denný cieľ je v kapse! Dnes '+gbp(a.day)+' z '+gbp(dg)+'. Výborná práca, užite si zvyšok dňa!',
+   'Bomba! Dnešných '+gbp(a.day)+' prekonalo denný cieľ '+gbp(dg)+'. Si skvelý!',
+   'Hotovo! Denný cieľ '+gbp(dg)+' je splnený, momentálne '+gbp(a.day)+'. Môžeš byť na seba pyšný!']);
+  if(sendNotif('Skvelá práca'+nm+'!',txt,1001)){N.lastDay=a.iso;save()}
+ }
+}
 const plWd=n=>n===1?'pracovný deň':n<5?'pracovné dni':'pracovných dní';
 const parseMin=s=>{s=String(s||'').trim();if(!s)return null;const m=s.match(/^(\d+)\s*:\s*(\d{1,2})$/);if(m)return +m[1]*60+ +m[2];const v=num(s);return v>=0?v:NaN};
 
@@ -289,6 +331,10 @@ function render(){
    else h+='<div class="note">Zostáva <b>'+gbp(left)+'</b></div>';
   }
  }
+ if(sh.daily&&d.cur){
+  const dg=dayGoal(),td=d.days[d.el]||0,pc=dg>0?td/dg:0;
+  h+='<div class="pl" style="margin-top:14px"><span>Dnes <b>'+gbp(td)+'</b></span><span>denný cieľ '+gbp(dg)+'</span></div><div class="prog" style="margin:8px 0 0"><i class="'+(pc>=1?'done':'')+'" style="width:'+Math.min(100,pc*100)+'%"></i></div>';
+ }
  h+='</section>';
  if(sh.forecast&&d.cur){
   const aw0=d.worked?d.total/d.worked:0,pr=d.total+aw0*wl,ok=pr>=goal;
@@ -355,8 +401,9 @@ $('s1').onclick=()=>{
  const mv=parseMin($('mins').value);
  if(mv!==null&&!(mv>=0)){$('err1').textContent='Minúty zadaj ako číslo (35) alebo h:mm (1:20).';return}
  const o={date:$('date').value,agency:selAg,amount:r2(a),note:$('note').value.trim(),min:mv>0?Math.round(mv*100)/100:undefined};
+ const b0=snap();
  if(editId){Object.assign(S.entries.find(x=>String(x.id)===String(editId)),o)}else{o.id=Date.now();S.entries.push(o)}
- S.lastAg=selAg;save();
+ S.lastAg=selAg;save();notifyCheck(b0);
  const d=new Date(o.date+'T12:00:00');Y=d.getFullYear();M=d.getMonth();
  $('sh1').classList.remove('on');render();
 };
@@ -370,6 +417,19 @@ function wdset(){
  $('wdset').innerHTML=WDORDER.map(x=>'<button class="chip'+(S.workdays.indexOf(x[0])>=0?' on':'')+'" data-d="'+x[0]+'">'+x[1]+'</button>').join('');
  document.querySelectorAll('#wdset .chip').forEach(c=>c.onclick=()=>{const d=+c.dataset.d,i=S.workdays.indexOf(d);if(i>=0){if(S.workdays.length>1)S.workdays.splice(i,1)}else S.workdays.push(d);save();wdset();render()});
 }
+function dayHint(){
+ const t=new Date(),n=dim(t.getFullYear(),t.getMonth()),wd=workdays({y:t.getFullYear(),m:t.getMonth()},1,n);
+ $('dayhint').textContent=S.dayGoal>0?'Vlastný denný cieľ '+gbp(S.dayGoal)+'.':'Automaticky '+gbp(S.goal/(wd||n))+' (mesačný cieľ ÷ '+wd+' pracovných dní tohto mesiaca).';
+}
+function notifset(){
+ const L=[['day','Upozornenie po splnení denného cieľa'],['month','Upozornenie po splnení mesačného cieľa']];
+ $('notifset').innerHTML=L.map(x=>'<div class="sw"><span>'+x[1]+'</span><button class="tg'+(S.notif[x[0]]?' on':'')+'" data-k="'+x[0]+'" aria-label="'+x[1]+'"></button></div>').join('');
+ document.querySelectorAll('#notifset .tg').forEach(t=>t.onclick=()=>{S.notif[t.dataset.k]=!S.notif[t.dataset.k];save();notifset()});
+}
+$('ntest').onclick=()=>{
+ if(!(window.Android&&typeof Android.notify==='function')){alert('Upozornenia fungujú len v Android appke (potrebná je APK 1.8).');return}
+ if(!sendNotif('Habana','Takto bude vyzerať upozornenie. Si skvelý!',1003))alert('Upozornenia nie sú povolené. Povoľ ich pre Habanu v nastaveniach telefónu.');
+};
 function agset(){
  $('agset').innerHTML=S.agencies.map(a=>'<div class="sw"><span>'+esc(a.name)+'</span><button class="tg'+(a.on?' on':'')+'" data-a="'+a.id+'" aria-label="'+esc(a.name)+'"></button></div>').join('');
  document.querySelectorAll('#agset .tg').forEach(t=>t.onclick=()=>{const a=S.agencies.find(x=>x.id===t.dataset.a);a.on=!a.on;save();agset();render()});
@@ -378,15 +438,15 @@ function viewset(){
  $('viewset').innerHTML=VIEW.map(g=>'<div class="sub">'+g[0]+'</div>'+g[1].map(x=>'<div class="sw"><span>'+x[1]+'<small>'+x[2]+'</small></span><button class="tg'+(S.show[x[0]]?' on':'')+'" data-k="'+x[0]+'" aria-label="'+x[1]+'"></button></div>').join('')).join('');
  document.querySelectorAll('#viewset .tg').forEach(t=>t.onclick=()=>{S.show[t.dataset.k]=!S.show[t.dataset.k];save();viewset();render()});
 }
-$('gear').onclick=()=>{infoTexts();$('name').value=S.name||'';$('rateIn').value=String(S.rate).replace('.',',');$('goalIn').value=String(S.goal).replace('.',',');$('err2').textContent='';$('bk').style.display='none';agset();viewset();wdset();$('sh2').classList.add('on')};
+$('gear').onclick=()=>{infoTexts();$('dayIn').value=S.dayGoal>0?String(S.dayGoal).replace('.',','):'';dayHint();notifset();$('name').value=S.name||'';$('rateIn').value=String(S.rate).replace('.',',');$('goalIn').value=String(S.goal).replace('.',',');$('err2').textContent='';$('bk').style.display='none';agset();viewset();wdset();$('sh2').classList.add('on')};
 $('addag').onclick=()=>{const n=$('newag').value.trim();if(!n)return;S.agencies.push({id:'a'+Date.now(),name:n,on:true});$('newag').value='';save();agset();render()};
 function applyText(){
  const r=num($('rateIn').value),g=num($('goalIn').value);
  if(!(g>0)){$('err2').textContent='Cieľ musí byť číslo väčšie ako 0.';return false}
  if(!(r>0)){$('err2').textContent='Kurz musí byť číslo väčšie ako 0.';return false}
- S.rate=r;S.goal=g;S.goalSet=true;S.name=$('name').value.trim();save();$('err2').textContent='';render();return true;
+ const dv=$('dayIn').value.trim();if(dv&&!(num(dv)>0)){$('err2').textContent='Denný cieľ musí byť číslo väčšie ako 0 alebo prázdny.';return false}S.dayGoal=dv?num(dv):null;S.rate=r;S.goal=g;S.goalSet=true;S.name=$('name').value.trim();save();$('err2').textContent='';dayHint();render();return true;
 }
-['name','rateIn','goalIn'].forEach(i=>$(i).addEventListener('change',applyText));
+['name','rateIn','goalIn','dayIn'].forEach(i=>$(i).addEventListener('change',applyText));
 $('c2').onclick=()=>{if(applyText())$('sh2').classList.remove('on')};
 $('exp').onclick=()=>{const t=JSON.stringify(S);if(window.Android)Android.share(t);else{$('bk').style.display='block';$('bk').value=t}};
 $('imp').onclick=()=>{
@@ -394,7 +454,7 @@ $('imp').onclick=()=>{
  if(b.style.display==='none'){b.style.display='block';b.value='';b.focus();$('err2').textContent='Vlož text zálohy a ťukni znova na „Obnoviť zo zálohy“.';return}
  try{const d=JSON.parse(b.value);if(!d.agencies||!d.entries)throw 0;if(!confirm('Prepísať všetky údaje v tejto appke zálohou?'))return;S=d;migrate2();save();b.style.display='none';$('sh2').classList.remove('on');render()}catch(e){$('err2').textContent='Záloha sa nedá prečítať.'}
 };
-function migrate2(){S.goal=S.goal>0?S.goal:1000;if(!Array.isArray(S.workdays)||!S.workdays.length)S.workdays=[1,2,3,4,5];S.rate=S.rate>0?S.rate:1.15;S.show=Object.assign({},DEF_SHOW,S.show||{});DEF_AG.forEach(d=>{if(!S.agencies.find(x=>x.id===d.id))S.agencies.push({...d})})}
+function migrate2(){S.goal=S.goal>0?S.goal:1000;if(!Array.isArray(S.workdays)||!S.workdays.length)S.workdays=[1,2,3,4,5];S.rate=S.rate>0?S.rate:1.15;S.show=Object.assign({},DEF_SHOW,S.show||{});if(!S.notif||typeof S.notif!=='object')S.notif={};S.notif=Object.assign({day:true,month:true,asked:false,lastDay:'',lastMonth:''},S.notif);DEF_AG.forEach(d=>{if(!S.agencies.find(x=>x.id===d.id))S.agencies.push({...d})})}
 
 /* ---------- Portal import (Dalang, Magna) ---------- */
 const HAS=()=>!!window.Android&&typeof Android.importPortal==='function';
@@ -425,6 +485,7 @@ const durMin=s=>{const m=String(s||'').match(/^(\d+):(\d{2}):(\d{2})$/);return m
 window.onImport=function(portal,str){
  const cfg=AUTO[portal]||{label:portal,unit:['záznam','záznamy','záznamov']};
  let d;try{d=JSON.parse(str)}catch(e){alert(cfg.label+': údaje sa nedajú prečítať.');queue=[];return}
+ const b0=snap();
  const byDay={};
  (d.sessions||[]).forEach(s=>{const p=s.date.split('/');const iso=p[2]+'-'+p[1]+'-'+p[0];const o=(byDay[iso]=byDay[iso]||{sum:0,n:0,c:0,min:0});o.sum+=s.pay;o.n++;if(s.cancelled)o.c++;o.min+=(s.min!=null?s.min:durMin(s.dur))});
  const pre=d.y+'-'+pad(d.m)+'-';
@@ -433,7 +494,7 @@ window.onImport=function(portal,str){
  Object.keys(byDay).sort().forEach(iso=>{const v=byDay[iso];sum+=v.sum;n+=v.n;
   const u=v.n===1?cfg.unit[0]:v.n<5?cfg.unit[1]:cfg.unit[2];
   S.entries.push({id:'auto-'+portal+'-'+iso,date:iso,agency:portal,amount:Math.round(v.sum*1000)/1000,min:Math.round(v.min*100)/100,note:cfg.label+' · '+v.n+' '+u+(v.c?' (z toho '+v.c+' zrušený)':''),auto:true})});
- S['last_'+portal]=new Date().toISOString();save();
+ S['last_'+portal]=new Date().toISOString();save();notifyCheck(b0);
  Y=d.y;M=d.m-1;render();
  const man=S.entries.filter(e=>!e.auto&&e.agency===portal&&e.date.startsWith(pre)).length;
  let msg=cfg.label+': stiahnutých '+n+' '+cfg.unit[2]+', spolu '+gbp(sum)+(d.total!=null?' (podľa portálu '+gbp(d.total)+')':'')+'.';
@@ -465,4 +526,5 @@ window.onUpdate=function(status,ver,manual){
 window.onBack=()=>{if($('sh1').classList.contains('on')){$('sh1').classList.remove('on');return true}if($('sh2').classList.contains('on')){$('sh2').classList.remove('on');return true}return false};
 render();
 try{if(window.Android&&Android.appOk)Android.appOk()}catch(e){}
+try{if(window.Android&&Android.requestNotify&&!S.notif.asked){S.notif.asked=true;save();Android.requestNotify()}}catch(e){}
 </script></body></html>
