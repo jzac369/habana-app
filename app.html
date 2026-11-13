@@ -727,6 +727,10 @@ window.onUpdate=function(status,ver,manual){
 window.onBack=()=>{if($('sh1').classList.contains('on')){$('sh1').classList.remove('on');return true}if($('sh2').classList.contains('on')){$('sh2').classList.remove('on');return true}return false};
 render();
 try{if(window.Android&&Android.appOk)Android.appOk()}catch(e){}
-try{if(S.pushTopic&&window.Android&&Android.pushTopic)Android.pushTopic(S.pushTopic);window.onPushNow();document.addEventListener('visibilitychange',()=>{if(!document.hidden)window.onPushNow()})}catch(e){}
+try{if(S.pushTopic&&window.Android&&Android.pushTopic)Android.pushTopic(S.pushTopic);window.onPushNow();document.addEventListener('visibilitychange',()=>{if(!document.hidden){window.onPushNow();updPoll()}})}catch(e){}
+let lastUpd=Date.now();
+function updPoll(force){try{if(!(window.Android&&Android.checkUpdate))return;if(!force&&Date.now()-lastUpd<60000)return;lastUpd=Date.now();Android.checkUpdate(false)}catch(e){}}
+setInterval(()=>{if(!document.hidden)updPoll(true)},300000);
+window.addEventListener('focus',()=>updPoll());
 try{if(window.Android&&Android.requestNotify&&!S.notif.asked){S.notif.asked=true;save();Android.requestNotify()}}catch(e){}
 </script></body></html>
