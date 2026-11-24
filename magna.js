@@ -13,7 +13,7 @@
     const key=TY*12+TM;
     // 1) list of completed bookings, newest first, 25 per page
     const items=new Map();
-    for(const tab of ['complete','cancelled']){
+    await Promise.all(['complete','cancelled'].map(async tab=>{
     let page=1,stop=false;
     while(!stop&&page<=120){
       P('Magna: zoznam, strana '+page+'…');
@@ -33,9 +33,9 @@
       if(inMonth===0&&older>0&&newer===0)stop=true;
       if(older>=links.length)stop=true;
       page++;
-      await sleep(150);
+      await sleep(30);
     }
-    }
+    }));
     // 2) amounts on each booking page
     const list=[...items.values()];
     const sessions=[];let missing=0,i=0;
@@ -55,10 +55,10 @@
           }else if(!pay&&st!=='Cancelled')missing++;
         }catch(e){missing++}
         P('Magna: '+sessions.length+' z '+list.length+' jobov…');
-        await sleep(120);
+        await sleep(25);
       }
     };
-    await Promise.all([worker(),worker(),worker()]);
+    await Promise.all([1,2,3,4,5,6].map(()=>worker()));
     // 3) monthly statement total (only exists for finished months)
     let total=null;
     try{
