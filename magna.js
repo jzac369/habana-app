@@ -48,7 +48,7 @@
           const st=(t.match(/Status\s*(Complete|Cancelled|Scheduled|In progress)/)||[])[1];
           const dm=t.match(/Booking date\/time\s*(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})/);
           const pv=pay?parseFloat(pay[1].replace(/,/g,'')):0;
-          const lm=t.match(/Language\s*([A-Za-z]+(?: [A-Za-z]+)*?)\s*\(/);const am=t.match(/Actual duration\s*([\d.]+)\s*minutes/);const mv=am?Math.round(parseFloat(am[1])*100)/100:0;
+          const lm=t.match(/Language\s*([A-Za-z]+(?: [A-Za-z]+)*?)\s*\(/);const am=t.match(/Actual duration\s*([\d.]+)\s*minutes/);const dm0=t.match(/(?:^|[^A-Za-z])Duration\s*([\d.]+)\s*minutes/);const mv=am?Math.round(parseFloat(am[1])*100)/100:(st==='Complete'&&dm0?Math.round(parseFloat(dm0[1])*100)/100:0);
           if(pay&&(!st||st==='Complete'||(st==='Cancelled'&&pv>0))){
             const day=dm?{d:+dm[1],m:MON[dm[2]],y:+dm[3]}:it;
             sessions.push({date:String(day.d).padStart(2,'0')+'/'+String(day.m).padStart(2,'0')+'/'+day.y,pay:pv,min:mv,lang:lm?lm[1]:'',noAct:(st==='Complete'&&!am),ref:it.id,cancelled:st==='Cancelled'});

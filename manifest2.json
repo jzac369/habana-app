@@ -1,10 +1,10 @@
 {
- "version": 19,
+ "version": 20,
  "minApk": 10,
  "files": {
   "app.html": "2b79576e61ff0206f2c742a180298cf7344c0ce5c040bb1ebf8952b9d98fd47b",
   "dalang.js": "9650c0fd442a26d4be9ad3cc44e5a9f7d1e89d1cb652b9be2508bded98330a85",
-  "magna.js": "1c9b853f9bdcbbe672b0a671131ee40c3f3c921900e21d56a18979c8e80dc67f"
+  "magna.js": "dd19bdc84a68c2f1683aa69749cde3723b445bd7ad058889907775227abc7008"
  },
- "sig": "MEQCICOXWPnG/0A87q5wrsp9MOLnrZlHoS0Y6U6cgOuzku3RAiAtRA5m3nfqdbNX91YKYC2Nt8PbPgOf4S28hBe2x2/leQ=="
+ "sig": "MEUCIE/7rfAKTYZ8dkhsgH3qlUzhbjJP6B95up8riLbMjHN+AiEAh5T6u9JCoPDxpJR62uE4OLYF9Wlx8PnKtnoSkVycexw="
 }
